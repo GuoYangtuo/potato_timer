@@ -1,4 +1,16 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    
+    <!-- 网络权限 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    
+    <!-- 阿里云一键登录 SDK 兼容性配置 -->
+    <uses-sdk tools:overrideLibrary="com.sean.rao.ali_auth,com.mobile.auth" />
+    
     <application
         android:label="potato_timer"
         android:name="${applicationName}"
@@ -25,12 +37,61 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+
+        <!-- 重点关注！！！！！！！-->
+        <!-- 全屏时使用主题 android:theme="@android:style/Theme.NoTitleBar.Fullscreen" -->
+        <!-- 弹窗时使用主题 android:theme="@style/authsdk_activity_dialog" -->
+        <!-- 如果不需要使用窗口模式，不要使用authsdk_activity_dialog主题，会出现异常动画-->
+        <!-- 如果需要使用authsdk_activity_dialog主题，则screenOrientation一定不能指定明确的方向，
+        比如portrait、sensorPortrait，在8.0的系统上不允许窗口模式指定orientation，会发生crash，需要指定为behind，
+        然后在授权页的前一个页面指定具体的orientation-->
+
+        <!--协议页面webview-->
+        <activity
+            android:name="com.mobile.auth.gatewayauth.activity.AuthWebVeiwActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            tools:replace="android:theme"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:screenOrientation="behind"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+
+        <!--联通电信授权页-->
+        <activity
+            android:name="com.mobile.auth.gatewayauth.LoginAuthActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            tools:replace="android:configChanges"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:screenOrientation="behind"
+            android:theme="@style/authsdk_activity_dialog"/>
+
+        <!--移动授权页-->
+        <activity
+            android:name="com.cmic.sso.sdk.activity.LoginAuthActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            tools:replace="android:configChanges"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:screenOrientation="behind"
+            android:theme="@style/authsdk_activity_dialog" />
+
+        <!--适配华为（huawei）刘海屏-->
+        <meta-data
+            android:name="android.notch_support"
+            android:value="true"/>
+        <!--适配小米（xiaomi）刘海屏-->
+        <meta-data
+            android:name="notch.config"
+            android:value="portrait|landscape" />
+        
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
+    
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
          https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.

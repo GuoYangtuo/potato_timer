@@ -1,4 +1,4 @@
-package com.example.potato_timer
+package com.guoyangtuo.potatoclock
 
 import io.flutter.embedding.android.FlutterActivity
 
