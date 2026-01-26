@@ -1,4 +1,4 @@
-package com.guoyangtuo.potatoclock
+package com.guoyangtuo.potatoclock1
 
 import io.flutter.embedding.android.FlutterActivity
 

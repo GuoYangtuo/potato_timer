@@ -1,7 +1,7 @@
 {
   "name": "potato-timer-server",
   "version": "1.0.0",
-  "description": "Potato Timer 一键登录后端服务",
+  "description": "Potato Timer 后端服务",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
@@ -10,8 +10,9 @@
     "watch": "tsc --watch"
   },
   "keywords": [
-    "ali-auth",
-    "one-click-login",
+    "potato-timer",
+    "motivation",
+    "goals",
     "nodejs",
     "typescript"
   ],
@@ -20,14 +21,18 @@
   "dependencies": {
     "express": "^4.18.2",
     "cors": "^2.8.5",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "mysql2": "^3.6.5",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
     "@types/cors": "^2.8.17",
     "@types/node": "^20.10.0",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/multer": "^1.4.11",
     "typescript": "^5.3.3",
     "ts-node-dev": "^2.0.0"
   }
 }
-

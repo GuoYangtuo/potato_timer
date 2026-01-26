@@ -1,12 +1,9 @@
-# Potato Timer 后端服务
+# 土豆时钟后端服务
 
-一键登录系统的 Node.js + TypeScript 后端服务。
+## 环境要求
 
-## 功能
-
-- 接收 Flutter 应用发送的一键登录信息
-- 存储和管理用户登录数据
-- 提供用户信息查询接口
+- Node.js 18+
+- MySQL 8.0+
 
 ## 安装
 
@@ -14,73 +11,124 @@
 npm install
 ```
 
-## 开发
+## 配置
 
-```bash
-npm run dev
+创建 `.env` 文件并配置以下环境变量：
+
+```env
+# 服务器配置
+PORT=3000
+NODE_ENV=development
+BASE_URL=http://localhost:3000
+
+# 阿里云配置
+ALIYUN_ACCESS_KEY_ID=your_access_key_id
+ALIYUN_ACCESS_KEY_SECRET=your_access_key_secret
+
+# 数据库配置
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=your_password
+DB_NAME=potato_timer
+
+# JWT配置
+JWT_SECRET=your_jwt_secret_key
 ```
 
-## 构建
+## 数据库初始化
+
+1. 创建数据库并导入表结构：
 
 ```bash
-npm run build
+mysql -u root -p < src/database/schema.sql
 ```
 
 ## 运行
 
+开发模式：
 ```bash
+npm run dev
+```
+
+生产模式：
+```bash
+npm run build
 npm start
 ```
 
 ## API 接口
 
-### POST /api/auth/login
-一键登录接口
+### 认证
 
-**请求体:**
-```json
-{
-  "token": "用户token（从阿里云号码认证SDK获取）"
-}
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | /api/auth/login | 一键登录 |
+| GET | /api/auth/me | 获取当前用户信息 |
+| PUT | /api/auth/profile | 更新用户信息 |
+
+### 激励内容
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | /api/motivations/public | 获取公开激励内容列表 |
+| GET | /api/motivations/my | 获取我的激励内容 |
+| GET | /api/motivations/:id | 获取激励内容详情 |
+| POST | /api/motivations | 创建激励内容 |
+| PUT | /api/motivations/:id | 更新激励内容 |
+| DELETE | /api/motivations/:id | 删除激励内容 |
+| POST | /api/motivations/:id/like | 点赞 |
+| DELETE | /api/motivations/:id/like | 取消点赞 |
+| POST | /api/motivations/:id/favorite | 收藏 |
+| DELETE | /api/motivations/:id/favorite | 取消收藏 |
+| GET | /api/motivations/favorites/list | 获取收藏列表 |
+
+### 目标
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | /api/goals/my | 获取我的目标列表 |
+| GET | /api/goals/public | 获取公开目标列表 |
+| GET | /api/goals/:id | 获取目标详情 |
+| POST | /api/goals | 创建目标 |
+| PUT | /api/goals/:id | 更新目标 |
+| DELETE | /api/goals/:id | 删除目标 |
+| POST | /api/goals/:id/complete | 完成目标（记录一次完成） |
+| GET | /api/goals/:id/motivations | 获取目标关联的激励内容 |
+
+### 标签
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | /api/tags | 获取所有可用标签 |
+| GET | /api/tags/popular | 获取热门标签 |
+
+### 文件上传
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | /api/upload/file | 上传单个文件 |
+| POST | /api/upload/files | 上传多个文件 |
+
+## 项目结构
+
 ```
-
-**说明**: 客户端只需要发送token，服务端会通过阿里云GetMobile接口获取手机号。
-
-**响应:**
-```json
-{
-  "success": true,
-  "message": "登录成功",
-  "data": {
-    "userId": 1,
-    "phoneNumber": "13800138000",
-    "loginTime": "2024-01-01T00:00:00.000Z",
-    "tokenPreview": "..."
-  }
-}
+server/
+├── src/
+│   ├── database/
+│   │   ├── db.ts          # 数据库连接
+│   │   └── schema.sql     # 数据库表结构
+│   ├── middleware/
+│   │   └── auth.ts        # 认证中间件
+│   ├── routes/
+│   │   ├── auth.ts        # 认证路由
+│   │   ├── goals.ts       # 目标路由
+│   │   ├── motivations.ts # 激励内容路由
+│   │   ├── tags.ts        # 标签路由
+│   │   └── upload.ts      # 文件上传路由
+│   ├── aliyun.ts          # 阿里云 API
+│   └── index.ts           # 入口文件
+├── uploads/               # 上传文件目录
+├── package.json
+└── tsconfig.json
 ```
-
-### GET /api/user/:userId
-获取用户信息
-
-### GET /api/users
-获取所有用户列表（开发测试用）
-
-### GET /health
-健康检查
-
-## 环境变量
-
-创建 `.env` 文件并配置以下参数：
-
-```env
-# 服务器端口
-PORT=3000
-
-# 阿里云AccessKey配置（必需）
-ALIYUN_ACCESS_KEY_ID=your_access_key_id
-ALIYUN_ACCESS_KEY_SECRET=your_access_key_secret
-```
-
-**重要**: 请务必配置阿里云AccessKey，否则无法调用GetMobile接口获取手机号。
-

@@ -1,12 +1,11 @@
-import 'dart:io';
-import 'dart:ui';
-
-import 'package:ali_auth/ali_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:potato_timer/l10n/app_localizations.dart';
+import 'package:potato_timer/pages/main_page.dart';
+import 'package:potato_timer/services/api_service.dart';
+import 'package:potato_timer/services/auth_service.dart';
+import 'package:potato_timer/theme/app_theme.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -18,153 +17,76 @@ class LoginPage extends StatefulWidget {
 }
 
 class LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
-  String status = "初始化中...";
-  String? userInfo;
+  String status = "";
+  bool _isLoading = false;
 
-  late CustomThirdView customThirdView;
-
-  /// Android 密钥 - 请替换为您的实际密钥
-  late String androidSk;
-
-  /// iOS 密钥 - 请替换为您的实际密钥
-  late String iosSk;
-
-  /// 弹窗宽度
-  late int screenWidth;
-
-  /// 弹窗高度
-  late int screenHeight;
-
-  /// 比例
-  late int unit;
-
-  /// 按钮高度
-  late int logBtnHeight;
+  final AuthService _authService = AuthService();
 
   @override
   void initState() {
     super.initState();
-
     _ambiguate(WidgetsBinding.instance)?.addObserver(this);
 
-    /// 初始化第三方按钮数据
-    setState(() {
-      // TODO: 请替换为您的实际密钥
-      androidSk =
-          "atAA1Exx/88Z/VpXx61uZbYQzQ+vOWqRydjjfLRU01B9EbvnwvBa6ONkpqvKyUbMO2Kn8UAgBBg6Q5ARzxUzuqpvHG/HwiBUZQellcxz3laYAFtUN8VfavkhcldFCJS6HF4/zKlhpjUAl41lEReIs00z/Msm7qSwrokul08OqgnYMbI9wP9duUI72vQfAl0xWF9zzJjhcdY7yXi4qxKsm2Xrg8rDSGvuCDk1ybMHLXF5k50yqb27TcDX1GDu8uyraisqS8IkX+G9zb7/Af3eTdpCSq02f5G1V1wjbqxL7T3DHATCLgBHF1YfRXnZKLdU";
-      iosSk =
-          "mjWr9sTsoXwmMx7qf0T2KQOQBpqkxeNW9I1ZNZ96ZCeBbeD9xYOUaC2mE9mcqog041VCot2sLcy9UArf+re517e5R9yowKCjf15VglZSP/HweRhOT8Cvci43zagyRqo40l85LTnZ5uJPaVauDLJB7hOTIkNPGm3fb621k6A6ZDh6aDGAKWyy0tPUPV/9RFrfeig9SURNe9Vl/Aok6SKg+SftM30uk2W8wdbV8gMVbU51Odnoapm2ZlAJYmCrdoXvROW5qc8pbQ8=";
+    // 只有支持一键登录的平台才需要监听登录事件
+    if (_authService.supportsOneClickLogin) {
+      _authService.listenLoginEvent(onEvent: (onEvent) {
+        if (kDebugMode) {
+          print("----------------> $onEvent <----------------");
+        }
 
-      screenWidth =
-          (PlatformDispatcher.instance.views.first.physicalSize.width /
-                  PlatformDispatcher.instance.views.first.devicePixelRatio)
-              .floor();
-      screenHeight =
-          (PlatformDispatcher.instance.views.first.physicalSize.height /
-                  PlatformDispatcher.instance.views.first.devicePixelRatio)
-              .floor();
-      unit = screenHeight ~/ 10;
-      logBtnHeight = (unit * 1.1).floor();
+        // 自己关闭授权页面
+        if (onEvent["code"] == "700005") {
+          _authService.quitPage();
+        }
 
-      Map<String, dynamic> configMap = {
-        "width": -1,
-        "height": -1,
-        "top": unit * 12 + 80,
-        "space": 20,
-        "size": 16,
-        "color": "#026ED2",
-        'itemWidth': 50,
-        'itemHeight': 50,
-        "viewItemName": ["支付宝", "淘宝", "微博"],
-        "viewItemPath": [
-          "assets/alipay.png",
-          "assets/taobao.png",
-          "assets/sina.png"
-        ]
-      };
-      customThirdView = CustomThirdView.fromJson(configMap);
-    });
+        // 登录成功，获取token
+        if (onEvent["code"] == "600000" && onEvent["data"] != null) {
+          _handleAliAuthLoginSuccess(onEvent["data"]);
+        }
 
-    // 监听登录事件
-    AliAuth.loginListen(onEvent: (onEvent) {
-      if (kDebugMode) {
-        print("----------------> $onEvent <----------------");
-      }
+        if (onEvent["code"] != "600000") {
+          Fluttertoast.showToast(
+              msg: "${onEvent['msg']}",
+              toastLength: Toast.LENGTH_SHORT,
+              gravity: ToastGravity.CENTER,
+              timeInSecForIosWeb: 1,
+              backgroundColor: Colors.red,
+              textColor: Colors.white,
+              fontSize: 16.0);
+        }
 
-      // 自己关闭授权页面
-      if (onEvent["code"] == "700005") {
-        AliAuth.quitPage();
-      }
-      
-      // 登录成功，获取token
-      if (onEvent["code"] == "600000" && onEvent["data"] != null) {
-        _handleLoginSuccess(onEvent["data"]);
-      }
-
-      Fluttertoast.showToast(
-          msg: "${onEvent['msg']}",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.CENTER,
-          timeInSecForIosWeb: 1,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
-          fontSize: 16.0);
-
-      setState(() {
-        status = onEvent.toString();
+        setState(() {
+          status = onEvent.toString();
+        });
       });
-    });
-  }
-
-  /// 获取后端 API 地址
-  String getApiBaseUrl() {
-    if (Platform.isAndroid) {
-      // Android 模拟器使用 10.0.2.2 访问宿主机
-      return 'http://192.168.124.18:3000';
-    } else if (Platform.isIOS) {
-      // iOS 模拟器使用 localhost
-      return 'http://localhost:3000';
-    } else {
-      // 其他平台使用 localhost
-      return 'http://localhost:3000';
     }
   }
 
-  /// 处理登录成功
-  Future<void> _handleLoginSuccess(String token) async {
+  /// 处理阿里云一键登录成功（移动端）
+  Future<void> _handleAliAuthLoginSuccess(String token) async {
+    setState(() => _isLoading = true);
+
     try {
-      // 只发送token到后端，后端通过阿里云GetMobile接口获取手机号
-      final apiUrl = '${getApiBaseUrl()}/api/auth/login';
-      final response = await http.post(
-        Uri.parse(apiUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'token': token,
-        }),
-      );
+      // 使用 ApiService 登录
+      await ApiService().login(token);
 
-      if (response.statusCode == 200) {
-        final result = jsonDecode(response.body);
-        setState(() {
-          userInfo = jsonEncode(result);
-          status = "登录成功！";
-        });
+      // 关闭授权页面
+      _authService.quitPage();
 
-        Fluttertoast.showToast(
-            msg: "登录成功！",
-            toastLength: Toast.LENGTH_SHORT,
-            gravity: ToastGravity.CENTER,
-            timeInSecForIosWeb: 1,
-            backgroundColor: Colors.green,
-            textColor: Colors.white,
-            fontSize: 16.0);
+      Fluttertoast.showToast(
+          msg: "登录成功！",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.green,
+          textColor: Colors.white,
+          fontSize: 16.0);
 
-        // 关闭登录页面
-        AliAuth.quitPage();
-      } else {
-        setState(() {
-          status = "登录失败：${response.statusCode}";
-        });
+      // 跳转到主页
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const MainPage()),
+        );
       }
     } catch (e) {
       if (kDebugMode) {
@@ -173,6 +95,73 @@ class LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
       setState(() {
         status = "登录请求失败: $e";
       });
+      Fluttertoast.showToast(
+          msg: "登录失败，请重试",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 16.0);
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  /// 处理手机号直接登录（Web/Desktop）
+  Future<void> _handlePhoneLogin(String phoneNumber) async {
+    setState(() => _isLoading = true);
+
+    try {
+      // 使用手机号直接登录
+      await ApiService().loginWithPhone(phoneNumber);
+
+      Fluttertoast.showToast(
+          msg: "登录成功！",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.green,
+          textColor: Colors.white,
+          fontSize: 16.0);
+
+      // 跳转到主页
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const MainPage()),
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print("登录请求失败: $e");
+      }
+      setState(() {
+        status = "登录请求失败: $e";
+      });
+      Fluttertoast.showToast(
+          msg: "登录失败，请重试",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 16.0);
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  /// 处理登录按钮点击
+  Future<void> _handleLoginPressed() async {
+    if (_authService.supportsOneClickLogin) {
+      // 移动端：使用一键登录
+      await _authService.initSdk();
+    } else {
+      // Web/Desktop：显示手机号输入对话框
+      final phoneNumber = await _authService.showLoginUI(context);
+      if (phoneNumber != null && phoneNumber.isNotEmpty) {
+        await _handlePhoneLogin(phoneNumber);
+      }
     }
   }
 
@@ -198,137 +187,196 @@ class LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
     if (kDebugMode) {
       print('LoginPage页面被销毁');
     }
-    AliAuth.dispose();
+    _authService.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('一键登录'),
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                '欢迎使用一键登录',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 40),
-              ElevatedButton(
-                onPressed: () async {
-                  await AliAuth.initSdk(getCustomLoginConfig());
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 40, vertical: 15),
-                ),
-                child: const Text(
-                  "开始一键登录",
-                  style: TextStyle(fontSize: 18),
-                ),
-              ),
-              const SizedBox(height: 30),
-              Text(
-                status,
-                style: const TextStyle(fontSize: 14),
-                textAlign: TextAlign.center,
-              ),
-              if (userInfo != null) ...[
-                const SizedBox(height: 20),
-                const Text(
-                  '用户信息:',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 10),
-                Expanded(
-                  child: SingleChildScrollView(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFFFF3E0),
+              AppTheme.backgroundColor,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              children: [
+                const Spacer(flex: 2),
+
+                // Logo 和标题
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.primaryGradient,
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: AppTheme.buttonShadow,
+                  ),
+                  child: const Center(
                     child: Text(
-                      userInfo!,
-                      style: const TextStyle(fontSize: 12),
+                      '🥔',
+                      style: TextStyle(fontSize: 48),
                     ),
                   ),
                 ),
+                const SizedBox(height: 24),
+                Text(
+                  l10n.appName,
+                  style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '激励自己，完成目标',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: AppTheme.textSecondary.withOpacity(0.8),
+                  ),
+                ),
+
+                const Spacer(flex: 2),
+
+                // 特性介绍
+                _buildFeatureItem(
+                  Icons.flag_rounded,
+                  '设定目标',
+                  '创建微习惯和主线任务',
+                ),
+                const SizedBox(height: 16),
+                _buildFeatureItem(
+                  Icons.auto_awesome_rounded,
+                  '激励内容',
+                  '记录激励你的经历和见闻',
+                ),
+                const SizedBox(height: 16),
+                _buildFeatureItem(
+                  Icons.notifications_rounded,
+                  '智能提醒',
+                  '准时提醒，不错过任何目标',
+                ),
+
+                const Spacer(flex: 2),
+
+                // 登录按钮
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _handleLoginPressed,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.phone_android_rounded),
+                              const SizedBox(width: 8),
+                              Text(
+                                _authService.supportsOneClickLogin
+                                    ? l10n.loginWithPhone
+                                    : '手机号登录',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // 协议说明
+                Text(
+                  '登录即表示同意《用户协议》和《隐私政策》',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textSecondary.withOpacity(0.6),
+                  ),
+                ),
+
+                const SizedBox(height: 32),
               ],
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  /// 自定义界面登录配置
-  AliAuthModel getCustomLoginConfig({bool isDelay = false}) {
-    return AliAuthModel(androidSk, iosSk,
-        isDebug: true,
-        isDelay: isDelay,
-        pageType: PageType.customXml,
-        statusBarColor: "#026ED2",
-        bottomNavColor: "#FFFFFF",
-        lightColor: true,
-        navHidden: false,
-        navReturnImgPath: "assets/return_btn.png",
-        logoHidden: true,
-        sloganHidden: true,
-        numberColor: "#ffffff",
-        numberSize: 28,
-        logBtnBackgroundPath:
-            "assets/login_btn_normal.png,assets/login_btn_unable.png,assets/login_btn_press.png",
-        logBtnText: "一键登录",
-        logBtnTextSize: 16,
-        logBtnTextColor: "#FFF000",
-        logBtnOffsetY: -1,
-        logBtnOffsetY_B: -1,
-        logBtnWidth: -1,
-        logBtnHeight: 51,
-        logBtnOffsetX: 0,
-        logBtnMarginLeftAndRight: 28,
-        logBtnLayoutGravity: Gravity.centerHorizntal,
-        protocolOneName: "《用户协议》",
-        protocolOneURL: "https://example.com/user-agreement",
-        protocolTwoName: "《隐私政策》",
-        protocolTwoURL: "https://example.com/privacy-policy",
-        protocolCustomColor: "#026ED2",
-        protocolColor: "#bfbfbf",
-        protocolLayoutGravity: Gravity.centerHorizntal,
-        numFieldOffsetY: -1,
-        numberFieldOffsetX: 0,
-        numberLayoutGravity: Gravity.centerHorizntal,
-        privacyOffsetX: -1,
-        privacyOffsetY: -1,
-        privacyOffsetY_B: 28,
-        checkBoxWidth: 18,
-        checkBoxHeight: 18,
-        checkboxHidden: false,
-        switchAccHidden: true,
-        uncheckedImgPath: "assets/btn_unchecked.png",
-        checkedImgPath: "assets/btn_checked.png",
-        privacyState: false,
-        protocolGravity: Gravity.centerHorizntal,
-        privacyTextSize: 12,
-        privacyMargin: 28,
-        vendorPrivacyPrefix: "",
-        vendorPrivacySuffix: "",
-        dialogBottom: false,
-        webViewStatusBarColor: "#026ED2",
-        webNavColor: "#FF00FF",
-        webNavTextColor: "#F0F0F8",
-        webNavReturnImgPath: "assets/return_btn.png",
-        webSupportedJavascript: true,
-        authPageActIn: "in_activity",
-        activityOut: "out_activity",
-        authPageActOut: "in_activity",
-        activityIn: "out_activity",
-        logBtnToastHidden: false,
-        pageBackgroundPath: "assets/background_image.jpeg",
-        customThirdView: customThirdView);
+  Widget _buildFeatureItem(IconData icon, String title, String subtitle) {
+    return Row(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: AppTheme.primaryColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Icon(
+            icon,
+            color: AppTheme.primaryColor,
+            size: 24,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   /// This allows a value of type T or T? to be treated as a value of type T?.
   T? _ambiguate<T>(T? value) => value;
 }
-

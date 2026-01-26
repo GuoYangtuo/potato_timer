@@ -1,0 +1,386 @@
+import 'package:flutter/material.dart';
+import 'package:potato_timer/models/motivation.dart';
+import 'package:potato_timer/theme/app_theme.dart';
+
+class MotivationCard extends StatelessWidget {
+  final Motivation motivation;
+  final VoidCallback? onTap;
+  final VoidCallback? onLike;
+  final VoidCallback? onFavorite;
+
+  const MotivationCard({
+    super.key,
+    required this.motivation,
+    this.onTap,
+    this.onLike,
+    this.onFavorite,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final typeColor = motivation.type == MotivationType.positive
+        ? AppTheme.positiveColor
+        : AppTheme.negativeColor;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+          boxShadow: AppTheme.cardShadow,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 媒体预览
+            if (motivation.media.isNotEmpty)
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(AppTheme.radiusMedium),
+                ),
+                child: AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.network(
+                        motivation.media.first.url,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.grey.shade200,
+                            child: const Icon(
+                              Icons.broken_image_outlined,
+                              color: Colors.grey,
+                              size: 40,
+                            ),
+                          );
+                        },
+                      ),
+                      // 视频标识
+                      if (motivation.media.first.type == 'video')
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.6),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.play_arrow_rounded,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                          ),
+                        ),
+                      // 多图标识
+                      if (motivation.media.length > 1)
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.6),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.photo_library_rounded,
+                                  color: Colors.white,
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${motivation.media.length}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 类型标签
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: typeColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              motivation.type == MotivationType.positive
+                                  ? Icons.thumb_up_rounded
+                                  : Icons.thumb_down_rounded,
+                              size: 12,
+                              color: typeColor,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              motivation.type == MotivationType.positive
+                                  ? '正向'
+                                  : '反向',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: typeColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Spacer(),
+                      if (motivation.author != null) ...[
+                        CircleAvatar(
+                          radius: 12,
+                          backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                          backgroundImage: motivation.author?.avatarUrl != null
+                              ? NetworkImage(motivation.author!.avatarUrl!)
+                              : null,
+                          child: motivation.author?.avatarUrl == null
+                              ? const Icon(
+                                  Icons.person,
+                                  size: 14,
+                                  color: AppTheme.primaryColor,
+                                )
+                              : null,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          motivation.author?.nickname ?? '用户',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+
+                  // 标题
+                  if (motivation.title != null && motivation.title!.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      motivation.title!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                  ],
+
+                  // 内容
+                  if (motivation.content != null && motivation.content!.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      motivation.content!,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppTheme.textSecondary,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+
+                  // 标签
+                  if (motivation.tags.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: motivation.tags.take(3).map((tag) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '#$tag',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+
+                  // 底部操作栏
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      // 点赞
+                      GestureDetector(
+                        onTap: onLike,
+                        behavior: HitTestBehavior.opaque,
+                        child: Row(
+                          children: [
+                            Icon(
+                              motivation.isLiked
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              size: 18,
+                              color: motivation.isLiked
+                                  ? Colors.red
+                                  : AppTheme.textSecondary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${motivation.likeCount}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: motivation.isLiked
+                                    ? Colors.red
+                                    : AppTheme.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      // 收藏
+                      GestureDetector(
+                        onTap: onFavorite,
+                        behavior: HitTestBehavior.opaque,
+                        child: Icon(
+                          motivation.isFavorited
+                              ? Icons.bookmark_rounded
+                              : Icons.bookmark_border_rounded,
+                          size: 18,
+                          color: motivation.isFavorited
+                              ? AppTheme.primaryColor
+                              : AppTheme.textSecondary,
+                        ),
+                      ),
+                      const Spacer(),
+                      // 浏览量
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.visibility_outlined,
+                            size: 14,
+                            color: AppTheme.textHint,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${motivation.viewCount}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.textHint,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// 简化版激励内容卡片，用于选择器等场景
+class MotivationChip extends StatelessWidget {
+  final Motivation motivation;
+  final bool isSelected;
+  final VoidCallback? onTap;
+
+  const MotivationChip({
+    super.key,
+    required this.motivation,
+    this.isSelected = false,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = motivation.type == MotivationType.positive
+        ? AppTheme.positiveColor
+        : AppTheme.negativeColor;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.15) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? color : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              motivation.type == MotivationType.positive
+                  ? Icons.thumb_up_rounded
+                  : Icons.thumb_down_rounded,
+              size: 14,
+              color: isSelected ? color : AppTheme.textSecondary,
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                motivation.title ?? motivation.content ?? '激励内容',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  color: isSelected ? color : AppTheme.textPrimary,
+                ),
+              ),
+            ),
+            if (isSelected) ...[
+              const SizedBox(width: 4),
+              Icon(Icons.check_rounded, size: 14, color: color),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
