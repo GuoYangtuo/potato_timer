@@ -3,14 +3,16 @@ enum MotivationType { positive, negative }
 class MediaItem {
   final int id;
   final String type; // 'image' or 'video'
-  final String url;
+  final String url; // 原始网络URL，用于同步到后端
   final String? thumbnailUrl;
+  final String? localPath; // 本地缓存路径，仅用于离线显示
 
   MediaItem({
     required this.id,
     required this.type,
     required this.url,
     this.thumbnailUrl,
+    this.localPath,
   });
 
   factory MediaItem.fromJson(Map<String, dynamic> json) {
@@ -19,6 +21,7 @@ class MediaItem {
       type: json['type'] as String,
       url: json['url'] as String,
       thumbnailUrl: json['thumbnailUrl'] as String?,
+      localPath: json['localPath'] as String?,
     );
   }
 
@@ -28,8 +31,12 @@ class MediaItem {
       'type': type,
       'url': url,
       'thumbnailUrl': thumbnailUrl,
+      // 注意：不要将 localPath 序列化到 JSON，因为它是设备特定的
     };
   }
+  
+  /// 获取用于显示的路径（优先使用本地缓存，否则使用网络URL）
+  String get displayUrl => localPath ?? url;
 }
 
 class Author {

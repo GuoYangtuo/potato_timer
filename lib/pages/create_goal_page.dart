@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:potato_timer/l10n/app_localizations.dart';
 import 'package:potato_timer/models/goal.dart';
 import 'package:potato_timer/models/motivation.dart';
-import 'package:potato_timer/services/api_service.dart';
+import 'package:potato_timer/services/offline_first_service.dart';
 import 'package:potato_timer/theme/app_theme.dart';
 
 class CreateGoalPage extends StatefulWidget {
@@ -74,7 +74,8 @@ class _CreateGoalPageState extends State<CreateGoalPage> {
 
   Future<void> _loadMotivations() async {
     try {
-      final motivations = await ApiService().getMyMotivations();
+      // 使用离线优先服务，即使没网也能获取本地数据
+      final motivations = await OfflineFirstService().getMyMotivations();
       setState(() {
         _myMotivations = motivations;
         _isLoadingMotivations = false;
@@ -90,8 +91,11 @@ class _CreateGoalPageState extends State<CreateGoalPage> {
     setState(() => _isLoading = true);
 
     try {
+      // 使用离线优先服务，即使离线也能立即保存
+      final service = OfflineFirstService();
+      
       if (widget.editGoal != null) {
-        await ApiService().updateGoal(widget.editGoal!.id, {
+        await service.updateGoal(widget.editGoal!.id, {
           'title': _titleController.text.trim(),
           'description': _descriptionController.text.trim().isEmpty 
               ? null 
@@ -107,7 +111,7 @@ class _CreateGoalPageState extends State<CreateGoalPage> {
           'motivationIds': _selectedMotivationIds,
         });
       } else {
-        await ApiService().createGoal(
+        await service.createGoal(
           title: _titleController.text.trim(),
           description: _descriptionController.text.trim().isEmpty 
               ? null 
@@ -126,6 +130,12 @@ class _CreateGoalPageState extends State<CreateGoalPage> {
       }
 
       if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(service.isLoggedIn ? '保存成功' : '已保存到本地，联网后自动同步'),
+            backgroundColor: Colors.green,
+          ),
+        );
         Navigator.pop(context, true);
       }
     } catch (e) {
@@ -133,6 +143,7 @@ class _CreateGoalPageState extends State<CreateGoalPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('保存失败: $e')),
         );
+        debugPrint('保存失败: $e');
       }
     } finally {
       setState(() => _isLoading = false);

@@ -3,6 +3,6 @@
 
 String getBaseUrl() {
   // Web 平台使用 localhost
-  return 'http://localhost:3000';
+  return 'http://192.168.124.18:3000';
 }
 

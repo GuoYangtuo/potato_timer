@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:potato_timer/models/motivation.dart';
 import 'package:potato_timer/theme/app_theme.dart';
+import 'package:potato_timer/widgets/cached_media_widget.dart';
 
 class MotivationCard extends StatelessWidget {
   final Motivation motivation;
   final VoidCallback? onTap;
   final VoidCallback? onLike;
   final VoidCallback? onFavorite;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
+  final bool showActions;
 
   const MotivationCard({
     super.key,
@@ -14,7 +18,60 @@ class MotivationCard extends StatelessWidget {
     this.onTap,
     this.onLike,
     this.onFavorite,
+    this.onEdit,
+    this.onDelete,
+    this.showActions = true,
   });
+
+  void _showOptionsMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            if (onEdit != null)
+              ListTile(
+                leading: const Icon(Icons.edit_rounded, color: AppTheme.primaryColor),
+                title: const Text('编辑'),
+                onTap: () {
+                  Navigator.pop(context);
+                  onEdit?.call();
+                },
+              ),
+            if (onDelete != null)
+              ListTile(
+                leading: const Icon(Icons.delete_rounded, color: Colors.red),
+                title: const Text('删除', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(context);
+                  onDelete?.call();
+                },
+              ),
+            ListTile(
+              leading: const Icon(Icons.close_rounded),
+              title: const Text('取消'),
+              onTap: () => Navigator.pop(context),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +81,9 @@ class MotivationCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
+      onLongPress: (onEdit != null || onDelete != null) 
+          ? () => _showOptionsMenu(context) 
+          : null,
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -44,19 +104,10 @@ class MotivationCard extends StatelessWidget {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Image.network(
-                        motivation.media.first.url,
+                      // 使用缓存的媒体组件，支持离线显示
+                      CachedMediaWidget(
+                        url: motivation.media.first.displayUrl,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: Colors.grey.shade200,
-                            child: const Icon(
-                              Icons.broken_image_outlined,
-                              color: Colors.grey,
-                              size: 40,
-                            ),
-                          );
-                        },
                       ),
                       // 视频标识
                       if (motivation.media.first.type == 'video')
@@ -242,73 +293,90 @@ class MotivationCard extends StatelessWidget {
                   ],
 
                   // 底部操作栏
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      // 点赞
-                      GestureDetector(
-                        onTap: onLike,
-                        behavior: HitTestBehavior.opaque,
-                        child: Row(
-                          children: [
-                            Icon(
-                              motivation.isLiked
-                                  ? Icons.favorite_rounded
-                                  : Icons.favorite_border_rounded,
-                              size: 18,
-                              color: motivation.isLiked
-                                  ? Colors.red
-                                  : AppTheme.textSecondary,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${motivation.likeCount}',
-                              style: TextStyle(
-                                fontSize: 12,
+                  if (showActions) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        // 点赞
+                        GestureDetector(
+                          onTap: onLike,
+                          behavior: HitTestBehavior.opaque,
+                          child: Row(
+                            children: [
+                              Icon(
+                                motivation.isLiked
+                                    ? Icons.favorite_rounded
+                                    : Icons.favorite_border_rounded,
+                                size: 18,
                                 color: motivation.isLiked
                                     ? Colors.red
                                     : AppTheme.textSecondary,
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      // 收藏
-                      GestureDetector(
-                        onTap: onFavorite,
-                        behavior: HitTestBehavior.opaque,
-                        child: Icon(
-                          motivation.isFavorited
-                              ? Icons.bookmark_rounded
-                              : Icons.bookmark_border_rounded,
-                          size: 18,
-                          color: motivation.isFavorited
-                              ? AppTheme.primaryColor
-                              : AppTheme.textSecondary,
-                        ),
-                      ),
-                      const Spacer(),
-                      // 浏览量
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.visibility_outlined,
-                            size: 14,
-                            color: AppTheme.textHint,
+                              const SizedBox(width: 4),
+                              Text(
+                                '${motivation.likeCount}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: motivation.isLiked
+                                      ? Colors.red
+                                      : AppTheme.textSecondary,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${motivation.viewCount}',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: AppTheme.textHint,
-                            ),
+                        ),
+                        const SizedBox(width: 16),
+                        // 收藏
+                        GestureDetector(
+                          onTap: onFavorite,
+                          behavior: HitTestBehavior.opaque,
+                          child: Icon(
+                            motivation.isFavorited
+                                ? Icons.bookmark_rounded
+                                : Icons.bookmark_border_rounded,
+                            size: 18,
+                            color: motivation.isFavorited
+                                ? AppTheme.primaryColor
+                                : AppTheme.textSecondary,
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
+                        ),
+                        const Spacer(),
+                        // 更多选项按钮（仅当有编辑/删除回调时显示）
+                        if (onEdit != null || onDelete != null)
+                          GestureDetector(
+                            onTap: () => _showOptionsMenu(context),
+                            behavior: HitTestBehavior.opaque,
+                            child: Padding(
+                              padding: const EdgeInsets.all(4),
+                              child: const Icon(
+                                Icons.more_horiz_rounded,
+                                size: 18,
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
+                          )
+                        else
+                          // 浏览量
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.visibility_outlined,
+                                size: 14,
+                                color: AppTheme.textHint,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${motivation.viewCount}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppTheme.textHint,
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),

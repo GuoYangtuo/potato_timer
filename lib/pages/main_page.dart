@@ -4,6 +4,7 @@ import 'package:potato_timer/pages/home_page.dart';
 import 'package:potato_timer/pages/explore_page.dart';
 import 'package:potato_timer/pages/inspiration_page.dart';
 import 'package:potato_timer/pages/profile_page.dart';
+import 'package:potato_timer/services/offline_first_service.dart';
 import 'package:potato_timer/theme/app_theme.dart';
 
 class MainPage extends StatefulWidget {
@@ -15,6 +16,7 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   int _currentIndex = 0;
+  bool _isInitialSyncing = false;
   
   final List<Widget> _pages = const [
     HomePage(),
@@ -24,13 +26,97 @@ class _MainPageState extends State<MainPage> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _performInitialSync();
+  }
+
+  /// 进入应用时同步云端数据
+  Future<void> _performInitialSync() async {
+    final service = OfflineFirstService();
+    
+    // 只有登录状态才同步
+    if (!service.isLoggedIn) return;
+    
+    setState(() => _isInitialSyncing = true);
+    
+    try {
+      debugPrint('🔄 开始同步云端数据...');
+      final result = await service.manualSync();
+      
+      if (result.success) {
+        debugPrint('✅ 云端数据同步完成');
+      } else {
+        debugPrint('⚠️ 同步完成但有警告: ${result.message}');
+      }
+    } catch (e) {
+      debugPrint('❌ 云端数据同步失败: $e');
+      // 同步失败不影响使用，继续使用本地数据
+    } finally {
+      if (mounted) {
+        setState(() => _isInitialSyncing = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
+      body: Stack(
+        children: [
+          IndexedStack(
+            index: _currentIndex,
+            children: _pages,
+          ),
+          // 同步进度指示器
+          if (_isInitialSyncing)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                child: Container(
+                  margin: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primaryColor.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        '正在同步云端数据...',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(

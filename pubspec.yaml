@@ -19,14 +19,24 @@ dependencies:
   fluttertoast: ^9.0.0
   # HTTP 请求
   http: ^1.1.0
+  # 加密（用于生成缓存文件名）
+  crypto: ^3.0.3
   # 本地存储
   shared_preferences: ^2.2.2
+  # 本地数据库
+  sqflite: ^2.3.0
+  path: ^1.8.3
+  path_provider: ^2.1.1
   # 本地通知
   flutter_local_notifications: ^18.0.1
   # 时区处理
   timezone: ^0.9.2
   # 图片选择
   image_picker: ^1.0.7
+  # 版本更新相关
+  package_info_plus: ^8.0.0
+  open_file: ^3.3.2
+  install_plugin: ^2.1.0
   # 国际化
   flutter_localizations:
     sdk: flutter

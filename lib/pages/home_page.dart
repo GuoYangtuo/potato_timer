@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:potato_timer/l10n/app_localizations.dart';
 import 'package:potato_timer/models/goal.dart';
 import 'package:potato_timer/services/api_service.dart';
+import 'package:potato_timer/services/offline_first_service.dart';
 import 'package:potato_timer/theme/app_theme.dart';
 import 'package:potato_timer/pages/motivation_page.dart';
+import 'package:potato_timer/pages/create_goal_page.dart';
 import 'package:potato_timer/widgets/goal_card.dart';
 
 class HomePage extends StatefulWidget {
@@ -25,12 +27,12 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadGoals() async {
-    final api = ApiService();
-    debugPrint('loadGoals - isLoggedIn: ${api.isLoggedIn}, token存在: ${api.isLoggedIn}');
-    debugPrint('loadGoals - baseUrl: ${api.baseUrl}');
+    // 使用离线优先服务，即使离线也能立即显示数据
+    final service = OfflineFirstService();
+    debugPrint('loadGoals - isLoggedIn: ${service.isLoggedIn}');
     setState(() => _isLoading = true);
     try {
-      final goals = await api.getMyGoals();
+      final goals = await service.getMyGoals();
       debugPrint('✅ goals 获取成功, 数量: ${goals.length}');  
       setState(() {
         _goals = goals.where((g) => g.type == GoalType.habit).toList();
@@ -51,6 +53,114 @@ class _HomePageState extends State<HomePage> {
         builder: (context) => MotivationPage(goalId: goal.id),
       ),
     ).then((_) => _loadGoals());
+  }
+
+  void _editGoal(Goal goal) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CreateGoalPage(editGoal: goal),
+      ),
+    ).then((result) {
+      if (result == true) {
+        _loadGoals();
+      }
+    });
+  }
+
+  void _showMainTaskOptions(Goal goal, AppLocalizations l10n) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: const Icon(Icons.edit_rounded, color: AppTheme.primaryColor),
+              title: Text(l10n.edit),
+              onTap: () {
+                Navigator.pop(context);
+                _editGoal(goal);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_rounded, color: Colors.red),
+              title: const Text('删除', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(context);
+                _deleteGoal(goal);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.close_rounded),
+              title: Text(l10n.cancel),
+              onTap: () => Navigator.pop(context),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteGoal(Goal goal) async {
+    final l10n = AppLocalizations.of(context);
+    
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        ),
+        title: const Text('删除目标'),
+        content: const Text('确定要删除这个目标吗？此操作无法撤销。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await OfflineFirstService().deleteGoal(goal.id);
+        _loadGoals();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('删除成功'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('删除失败: $e')),
+          );
+        }
+      }
+    }
   }
 
   @override
@@ -152,6 +262,8 @@ class _HomePageState extends State<HomePage> {
                           child: GoalCard(
                             goal: _goals[index],
                             onTap: () => _openGoal(_goals[index]),
+                            onEdit: () => _editGoal(_goals[index]),
+                            onDelete: () => _deleteGoal(_goals[index]),
                           ),
                         );
                       },
@@ -174,6 +286,7 @@ class _HomePageState extends State<HomePage> {
   Widget _buildMainTaskCard(Goal goal, AppLocalizations l10n) {
     return GestureDetector(
       onTap: () => _openGoal(goal),
+      onLongPress: () => _showMainTaskOptions(goal, l10n),
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(

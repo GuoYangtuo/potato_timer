@@ -10,6 +10,7 @@ import motivationsRouter from './routes/motivations';
 import goalsRouter from './routes/goals';
 import tagsRouter from './routes/tags';
 import uploadRouter from './routes/upload';
+import versionRouter from './routes/version';
 
 // 加载环境变量
 dotenv.config();
@@ -25,6 +26,9 @@ app.use(express.urlencoded({ extended: true }));
 // 静态文件服务（上传的文件）
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+// 静态文件服务（应用更新包）
+app.use('/updates', express.static(path.join(__dirname, '../updates')));
+
 // 健康检查接口
 app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', message: 'Server is running' });
@@ -36,6 +40,7 @@ app.use('/api/motivations', motivationsRouter);
 app.use('/api/goals', goalsRouter);
 app.use('/api/tags', tagsRouter);
 app.use('/api/upload', uploadRouter);
+app.use('/api/version', versionRouter);
 
 // 错误处理
 app.use((err: any, req: Request, res: Response, next: any) => {
@@ -71,6 +76,8 @@ async function start() {
     console.log(`   POST /api/goals/:id/complete - 完成目标`);
     console.log(`   GET  /api/tags - 获取标签列表`);
     console.log(`   POST /api/upload/file - 上传文件`);
+    console.log(`   GET  /api/version/check - 检查版本更新`);
+    console.log(`   POST /api/version/update - 更新版本配置（管理员）`);
     console.log(`   GET  /health - 健康检查`);
   });
 }

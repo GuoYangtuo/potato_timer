@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:potato_timer/l10n/app_localizations.dart';
 import 'package:potato_timer/models/goal.dart';
 import 'package:potato_timer/models/motivation.dart';
-import 'package:potato_timer/services/api_service.dart';
+import 'package:potato_timer/services/offline_first_service.dart';
 import 'package:potato_timer/theme/app_theme.dart';
 import 'package:potato_timer/widgets/goal_card.dart';
 import 'package:potato_timer/widgets/motivation_card.dart';
@@ -45,7 +45,8 @@ class _ExplorePageState extends State<ExplorePage>
   Future<void> _loadGoals() async {
     setState(() => _isLoadingGoals = true);
     try {
-      final goals = await ApiService().getPublicGoals();
+      // 使用离线优先服务，公开内容也会缓存
+      final goals = await OfflineFirstService().getPublicGoals();
       setState(() {
         _goals = goals;
         _isLoadingGoals = false;
@@ -58,7 +59,8 @@ class _ExplorePageState extends State<ExplorePage>
   Future<void> _loadMotivations() async {
     setState(() => _isLoadingMotivations = true);
     try {
-      final motivations = await ApiService().getPublicMotivations(
+      // 使用离线优先服务
+      final motivations = await OfflineFirstService().getPublicMotivations(
         type: _motivationType,
       );
       setState(() {

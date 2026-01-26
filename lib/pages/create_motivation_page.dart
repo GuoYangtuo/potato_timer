@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:potato_timer/l10n/app_localizations.dart';
 import 'package:potato_timer/models/motivation.dart';
 import 'package:potato_timer/services/api_service.dart';
+import 'package:potato_timer/services/offline_first_service.dart';
 import 'package:potato_timer/theme/app_theme.dart';
 
 class CreateMotivationPage extends StatefulWidget {
@@ -133,8 +134,11 @@ class _CreateMotivationPageState extends State<CreateMotivationPage> {
     setState(() => _isLoading = true);
 
     try {
-      // 先上传未上传的媒体
+      final service = OfflineFirstService();
+      
+      // 如果有媒体文件且在线，先上传媒体
       final uploadedMedia = <Map<String, dynamic>>[];
+      bool hasUnuploadedMedia = false;
       
       for (final item in _mediaItems) {
         if (item['isUploaded'] == true) {
@@ -144,17 +148,26 @@ class _CreateMotivationPageState extends State<CreateMotivationPage> {
             'thumbnailUrl': item['thumbnailUrl'],
           });
         } else {
-          final result = await ApiService().uploadFile(item['file'] as File);
-          uploadedMedia.add({
-            'type': result['type'],
-            'url': result['url'],
-            'thumbnailUrl': result['thumbnailUrl'],
-          });
+          hasUnuploadedMedia = true;
+          // 尝试上传，如果失败也不阻止保存
+          if (service.isLoggedIn) {
+            try {
+              final result = await ApiService().uploadFileFromPath((item['file'] as File).path);
+              uploadedMedia.add({
+                'type': result['type'],
+                'url': result['url'],
+                'thumbnailUrl': result['thumbnailUrl'],
+              });
+            } catch (e) {
+              // 上传失败，跳过此媒体
+              debugPrint('媒体上传失败: $e');
+            }
+          }
         }
       }
 
       if (widget.editMotivation != null) {
-        await ApiService().updateMotivation(widget.editMotivation!.id, {
+        await service.updateMotivation(widget.editMotivation!.id, {
           'title': _titleController.text.trim().isEmpty 
               ? null 
               : _titleController.text.trim(),
@@ -167,7 +180,7 @@ class _CreateMotivationPageState extends State<CreateMotivationPage> {
           'tags': _tags,
         });
       } else {
-        await ApiService().createMotivation(
+        await service.createMotivation(
           title: _titleController.text.trim().isEmpty 
               ? null 
               : _titleController.text.trim(),
@@ -182,6 +195,19 @@ class _CreateMotivationPageState extends State<CreateMotivationPage> {
       }
 
       if (mounted) {
+        String message = '保存成功';
+        if (!service.isLoggedIn) {
+          message = '已保存到本地，联网后自动同步';
+        } else if (hasUnuploadedMedia && uploadedMedia.isEmpty) {
+          message = '保存成功（媒体文件将在联网时上传）';
+        }
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.green,
+          ),
+        );
         Navigator.pop(context, true);
       }
     } catch (e) {
@@ -189,6 +215,7 @@ class _CreateMotivationPageState extends State<CreateMotivationPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('保存失败: $e')),
         );
+        debugPrint('保存失败: $e');
       }
     } finally {
       setState(() => _isLoading = false);

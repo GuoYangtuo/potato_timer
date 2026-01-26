@@ -12,10 +12,19 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
+// 辅助函数：根据文件判断是否为图片
+const isImageFile = (file: Express.Multer.File): boolean => {
+  if (file.mimetype.startsWith('image/')) return true;
+  
+  // 如果 MIME 类型不可靠，检查扩展名
+  const ext = path.extname(file.originalname).toLowerCase();
+  return ['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext);
+};
+
 // 配置 multer
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const type = file.mimetype.startsWith('image/') ? 'images' : 'videos';
+    const type = isImageFile(file) ? 'images' : 'videos';
     const typeDir = path.join(uploadDir, type);
     if (!fs.existsSync(typeDir)) {
       fs.mkdirSync(typeDir, { recursive: true });
@@ -30,14 +39,30 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  const allowedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  const allowedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/jpg'];
   const allowedVideoTypes = ['video/mp4', 'video/quicktime', 'video/webm'];
   
+  // 检查 MIME 类型
   if (allowedImageTypes.includes(file.mimetype) || allowedVideoTypes.includes(file.mimetype)) {
     cb(null, true);
-  } else {
-    cb(new Error('不支持的文件类型'));
+    return;
   }
+  
+  // 如果 MIME 类型是 application/octet-stream 或未识别，检查文件扩展名
+  if (file.mimetype === 'application/octet-stream' || !file.mimetype || file.mimetype === 'application/unknown') {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowedImageExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    const allowedVideoExts = ['.mp4', '.mov', '.webm'];
+    
+    if (allowedImageExts.includes(ext) || allowedVideoExts.includes(ext)) {
+      console.log(`文件 MIME 类型未正确识别 (${file.mimetype})，但扩展名有效: ${ext}`);
+      cb(null, true);
+      return;
+    }
+  }
+  
+  console.log(`不支持的文件类型 - MIME: ${file.mimetype}, 文件名: ${file.originalname}`);
+  cb(new Error('不支持的文件类型'));
 };
 
 const upload = multer({
@@ -59,9 +84,9 @@ router.post('/file', authMiddleware, upload.single('file'), async (req: Request,
     }
 
     const file = req.file;
-    const isImage = file.mimetype.startsWith('image/');
+    const isImage = isImageFile(file);
     const type = isImage ? 'images' : 'videos';
-    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
+    const baseUrl = process.env.BASE_URL || `http://192.168.124.18:${process.env.PORT || 3000}`;
     const url = `${baseUrl}/uploads/${type}/${file.filename}`;
 
     res.json({
@@ -94,10 +119,10 @@ router.post('/files', authMiddleware, upload.array('files', 10), async (req: Req
       });
     }
 
-    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
+    const baseUrl = process.env.BASE_URL || `http://192.168.124.18:${process.env.PORT || 3000}`;
     
     const uploadedFiles = files.map((file) => {
-      const isImage = file.mimetype.startsWith('image/');
+      const isImage = isImageFile(file);
       const type = isImage ? 'images' : 'videos';
       return {
         url: `${baseUrl}/uploads/${type}/${file.filename}`,

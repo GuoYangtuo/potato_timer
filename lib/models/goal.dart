@@ -22,14 +22,28 @@ class GoalMotivation {
   });
 
   factory GoalMotivation.fromJson(Map<String, dynamic> json) {
+    // 尝试从 firstMediaUrl/firstMediaType 字段获取，如果没有则从 media 数组中获取
+    String? mediaUrl = json['firstMediaUrl'] as String?;
+    String? mediaType = json['firstMediaType'] as String?;
+    
+    // 如果没有 firstMediaUrl，尝试从 media 数组中获取第一个
+    if (mediaUrl == null && json['media'] != null && json['media'] is List) {
+      final mediaList = json['media'] as List;
+      if (mediaList.isNotEmpty) {
+        final firstMedia = mediaList[0] as Map<String, dynamic>;
+        mediaUrl = firstMedia['url'] as String?;
+        mediaType = firstMedia['type'] as String?;
+      }
+    }
+    
     return GoalMotivation(
       id: json['id'] as int,
       title: json['title'] as String?,
       type: json['type'] == 'positive' 
           ? MotivationType.positive 
           : MotivationType.negative,
-      firstMediaUrl: json['firstMediaUrl'] as String?,
-      firstMediaType: json['firstMediaType'] as String?,
+      firstMediaUrl: mediaUrl,
+      firstMediaType: mediaType,
       content: json['content'] as String?,
     );
   }

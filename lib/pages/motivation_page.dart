@@ -3,10 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:potato_timer/l10n/app_localizations.dart';
 import 'package:potato_timer/models/goal.dart';
 import 'package:potato_timer/models/motivation.dart';
-import 'package:potato_timer/services/api_service.dart';
+import 'package:potato_timer/services/offline_first_service.dart';
 import 'package:potato_timer/services/notification_service.dart';
 import 'package:potato_timer/theme/app_theme.dart';
 import 'package:potato_timer/pages/calm_page.dart';
+import 'package:potato_timer/widgets/cached_media_widget.dart';
 
 class MotivationPage extends StatefulWidget {
   final int goalId;
@@ -49,9 +50,17 @@ class _MotivationPageState extends State<MotivationPage> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final data = await ApiService().getGoalMotivations(widget.goalId);
-      final goalData = data['goal'] as Map<String, dynamic>;
-      final motivationsData = data['motivations'] as List;
+      // 使用离线优先服务
+      final data = await OfflineFirstService().getGoalMotivations(widget.goalId);
+      final goalData = data['goal'] as Map<String, dynamic>?;
+      final motivationsData = data['motivations'] as List?;
+
+      // 检查数据是否有效
+      if (goalData == null) {
+        throw Exception('目标数据不存在');
+      }
+
+      debugPrint('motivationsData: $motivationsData');
 
       setState(() {
         _goal = Goal(
@@ -63,7 +72,7 @@ class _MotivationPageState extends State<MotivationPage> {
           sessionDurationMinutes: goalData['sessionDurationMinutes'] ?? 240,
           createdAt: DateTime.now(),
         );
-        _motivations = motivationsData
+        _motivations = (motivationsData ?? [])
             .map((m) => GoalMotivation.fromJson(m as Map<String, dynamic>))
             .toList();
         _isLoading = false;
@@ -77,6 +86,7 @@ class _MotivationPageState extends State<MotivationPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('加载失败: $e')),
         );
+        debugPrint('loadData error: $e');
       }
     }
   }
@@ -206,7 +216,7 @@ class _MotivationPageState extends State<MotivationPage> {
         durationMinutes = 0;
       }
 
-      await ApiService().completeGoal(
+      await OfflineFirstService().completeGoal(
         widget.goalId,
         durationMinutes: durationMinutes,
       );
@@ -310,12 +320,10 @@ class _MotivationPageState extends State<MotivationPage> {
       return Positioned.fill(
         child: motivation.firstMediaType == 'video'
             ? _buildVideoPlayer(motivation.firstMediaUrl!)
-            : Image.network(
-                motivation.firstMediaUrl!,
+            : CachedMediaWidget(
+                url: motivation.firstMediaUrl!,
                 fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  return _buildTextContent(motivation);
-                },
+                errorWidget: _buildTextContent(motivation),
               ),
       );
     }

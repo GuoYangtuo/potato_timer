@@ -440,6 +440,28 @@ class ApiService {
     return List<Map<String, dynamic>>.from(data['data']);
   }
 
+  // ==================== 版本更新相关 ====================
+
+  /// 检查应用版本更新
+  /// 返回: {"version": 版本号, "downloadUrl": 下载地址, "updateLog": 更新日志}
+  Future<Map<String, dynamic>?> checkAppVersion() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/version/check'),
+        headers: _headers,
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = await _handleResponse(response);
+        return data['data'];
+      }
+      return null;
+    } catch (e) {
+      // 版本检查失败不影响应用正常使用
+      return null;
+    }
+  }
+
   // ==================== 文件上传 ====================
   // 注意：文件上传功能仅在支持 dart:io 的平台可用（Android/iOS/Desktop）
   // Web 平台需要使用不同的实现方式

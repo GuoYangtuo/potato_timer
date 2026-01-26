@@ -154,8 +154,8 @@ class LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
   /// 处理登录按钮点击
   Future<void> _handleLoginPressed() async {
     if (_authService.supportsOneClickLogin) {
-      // 移动端：使用一键登录
-      await _authService.initSdk();
+      // 移动端：显示一键登录界面
+      await _authService.showLoginUI(context);
     } else {
       // Web/Desktop：显示手机号输入对话框
       final phoneNumber = await _authService.showLoginUI(context);

@@ -58,7 +58,7 @@ class AuthService {
   }
 
   /// 监听登录事件（仅移动端）
-  void listenLoginEvent({required Function(Map<dynamic, dynamic>) onEvent}) {
+  void listenLoginEvent({required void Function(dynamic) onEvent}) {
     if (supportsOneClickLogin) {
       AliAuth.loginListen(onEvent: onEvent);
     }

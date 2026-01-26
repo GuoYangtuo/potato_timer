@@ -6,12 +6,68 @@ import 'package:potato_timer/theme/app_theme.dart';
 class GoalCard extends StatelessWidget {
   final Goal goal;
   final VoidCallback? onTap;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const GoalCard({
     super.key,
     required this.goal,
     this.onTap,
+    this.onEdit,
+    this.onDelete,
   });
+
+  void _showOptionsMenu(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            if (onEdit != null)
+              ListTile(
+                leading: const Icon(Icons.edit_rounded, color: AppTheme.primaryColor),
+                title: Text(l10n.edit),
+                onTap: () {
+                  Navigator.pop(context);
+                  onEdit?.call();
+                },
+              ),
+            if (onDelete != null)
+              ListTile(
+                leading: const Icon(Icons.delete_rounded, color: Colors.red),
+                title: Text(l10n.delete, style: const TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(context);
+                  onDelete?.call();
+                },
+              ),
+            ListTile(
+              leading: const Icon(Icons.close_rounded),
+              title: Text(l10n.cancel),
+              onTap: () => Navigator.pop(context),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,6 +76,7 @@ class GoalCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
+      onLongPress: () => _showOptionsMenu(context),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
