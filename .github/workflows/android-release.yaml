@@ -112,9 +112,6 @@ jobs:
           script: |
             cd /root/potato_timer_server 
             
-            echo "📦 安装/更新服务器依赖..."
-            npm install --production
-            
             # 确定版本号和更新日志
             if [ -n "${{ github.event.inputs.version_number }}" ]; then
               VERSION="${{ github.event.inputs.version_number }}"
@@ -137,15 +134,7 @@ jobs:
             
             # 重启服务 (根据你的服务名称调整)
             echo "🔄 重启服务..."
-            if systemctl is-active --quiet potato_timer_backend; then
-              systemctl restart potato_timer_backend
-              echo "✅ systemd 服务已重启"
-            elif pm2 list | grep -q potato_timer; then
-              pm2 restart potato_timer
-              echo "✅ PM2 服务已重启"
-            else
-              echo "⚠️  未检测到运行的服务，请手动启动"
-            fi
+            systemctl restart potato_timer_backend.service
             
             echo "✅ 部署完成！"
 
