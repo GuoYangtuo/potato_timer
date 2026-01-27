@@ -35,6 +35,11 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     super.dispose();
   }
 
+  /// 公开的刷新方法，供外部调用
+  void refresh() {
+    _loadData();
+  }
+
   Future<void> _loadData() async {
     _loadMyMotivations();
     _loadFavorites();

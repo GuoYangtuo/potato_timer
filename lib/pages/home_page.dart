@@ -25,6 +25,11 @@ class _HomePageState extends State<HomePage> {
     _loadGoals();
   }
 
+  /// 公开的刷新方法，供外部调用
+  void refresh() {
+    _loadGoals();
+  }
+
   Future<void> _loadGoals() async {
     // 使用离线优先服务，即使离线也能立即显示数据
     final service = OfflineFirstService();

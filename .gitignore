@@ -45,3 +45,16 @@ app.*.map.json
 /android/app/release
 
 /server/uploads
+
+# CI/CD related
+*.keystore
+*.jks
+key.properties
+potato_timer_deploy_key
+potato_timer_deploy_key.pub
+*.apk
+*.aab
+
+# Server updates directory (APK files)
+/server/updates/*.apk
+/server/updates/*.aab

@@ -478,6 +478,20 @@ class LocalStorageDao {
     return maps.map((map) => GoalCompletion.fromJson(map)).toList();
   }
 
+  /// 获取目标关联的激励ID列表
+  Future<List<int>> getGoalMotivationIds(int goalId) async {
+    final db = await _dbService.database;
+    
+    final List<Map<String, dynamic>> maps = await db.query(
+      'goal_motivations',
+      columns: ['motivationId'],
+      where: 'goalId = ?',
+      whereArgs: [goalId],
+    );
+
+    return maps.map((map) => map['motivationId'] as int).toList();
+  }
+
   // ==================== 同步相关 ====================
 
   /// 获取需要同步的激励

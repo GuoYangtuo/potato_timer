@@ -18,16 +18,22 @@ class _MainPageState extends State<MainPage> {
   int _currentIndex = 0;
   bool _isInitialSyncing = false;
   
-  final List<Widget> _pages = const [
-    HomePage(),
-    ExplorePage(),
-    InspirationPage(),
-    ProfilePage(),
-  ];
+  // 使用 GlobalKey 来访问页面状态
+  final GlobalKey<State<HomePage>> _homePageKey = GlobalKey<State<HomePage>>();
+  final GlobalKey<State<ProfilePage>> _profilePageKey = GlobalKey<State<ProfilePage>>();
+  
+  late final List<Widget> _pages;
 
   @override
   void initState() {
     super.initState();
+    // 初始化页面列表
+    _pages = [
+      HomePage(key: _homePageKey),
+      const ExplorePage(),
+      const InspirationPage(),
+      ProfilePage(key: _profilePageKey),
+    ];
     _performInitialSync();
   }
 
@@ -55,6 +61,24 @@ class _MainPageState extends State<MainPage> {
     } finally {
       if (mounted) {
         setState(() => _isInitialSyncing = false);
+      }
+    }
+  }
+
+  /// 切换标签时刷新页面数据
+  void _refreshPageOnSwitch(int index) {
+    // 切换到首页时刷新
+    if (index == 0) {
+      final state = _homePageKey.currentState;
+      if (state != null && state.mounted) {
+        (state as dynamic).refresh();
+      }
+    }
+    // 切换到我的页面时刷新
+    else if (index == 3) {
+      final state = _profilePageKey.currentState;
+      if (state != null && state.mounted) {
+        (state as dynamic).refresh();
       }
     }
   }
@@ -152,9 +176,13 @@ class _MainPageState extends State<MainPage> {
     
     return GestureDetector(
       onTap: () {
-        setState(() {
-          _currentIndex = index;
-        });
+        if (_currentIndex != index) {
+          setState(() {
+            _currentIndex = index;
+          });
+          // 切换到首页或我的页面时刷新数据
+          _refreshPageOnSwitch(index);
+        }
       },
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(

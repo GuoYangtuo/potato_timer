@@ -97,6 +97,7 @@ class SyncService {
   /// 同步激励数据
   Future<void> _syncMotivations() async {
     final motivations = await _dao.getMotivationsNeedSync();
+    debugPrint('同步激励数据: ${motivations.length}');
     
     for (final motivationMap in motivations) {
       try {
@@ -171,7 +172,9 @@ class SyncService {
           }
           await _dao.markGoalSynced(id, null);
         } else if (localOnly) {
-          // 新建操作
+          // 新建操作 - 获取关联的激励ID
+          final motivationIds = await _dao.getGoalMotivationIds(id);
+          
           final serverId = await _api.createGoal(
             title: goalMap['title'] as String,
             description: goalMap['description'] as String?,
@@ -184,6 +187,7 @@ class SyncService {
             morningReminderTime: goalMap['morningReminderTime'] as String?,
             afternoonReminderTime: goalMap['afternoonReminderTime'] as String?,
             sessionDurationMinutes: goalMap['sessionDurationMinutes'] as int? ?? 240,
+            motivationIds: motivationIds.isNotEmpty ? motivationIds : null,
           );
           await _dao.markGoalSynced(id, serverId);
         } else {

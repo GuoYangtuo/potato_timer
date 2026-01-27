@@ -382,6 +382,11 @@ class OfflineFirstService {
     
     final localId = await _dao.saveGoal(goal, needsSync: true, localOnly: true);
     
+    // 保存激励关联
+    if (motivationIds != null && motivationIds.isNotEmpty) {
+      await _dao.updateGoal(localId, {'motivationIds': motivationIds}, needsSync: false);
+    }
+    
     // 如果在线，立即同步
     if (_api.isLoggedIn) {
       unawaited(_sync.syncNow());
