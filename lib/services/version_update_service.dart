@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:install_plugin/install_plugin.dart';
 import 'package:open_file/open_file.dart';
 
 /// 版本更新服务
@@ -202,38 +201,14 @@ class VersionUpdateService {
       
       debugPrint('准备安装APK: $filePath');
       
-      // 使用 install_plugin 安装APK
-      try {
-        final result = await InstallPlugin.install(filePath);
-        debugPrint('安装结果: $result');
-        
-        if (result['isSuccess'] == true) {
-          Fluttertoast.showToast(msg: '开始安装更新...');
-          return true;
-        } else {
-          // install_plugin 失败，尝试使用 open_file
-          debugPrint('install_plugin失败，尝试使用open_file');
-          final openResult = await OpenFile.open(filePath);
-          
-          if (openResult.type == ResultType.done) {
-            Fluttertoast.showToast(msg: '准备安装更新...');
-            return true;
-          } else {
-            throw Exception('打开安装包失败: ${openResult.message}');
-          }
-        }
-      } catch (e) {
-        debugPrint('使用install_plugin失败: $e，尝试open_file');
-        
-        // 降级方案：使用 open_file
-        final openResult = await OpenFile.open(filePath);
-        
-        if (openResult.type == ResultType.done) {
-          Fluttertoast.showToast(msg: '准备安装更新...');
-          return true;
-        } else {
-          throw Exception('打开安装包失败: ${openResult.message}');
-        }
+      // 使用 open_file 安装APK
+      final openResult = await OpenFile.open(filePath);
+      
+      if (openResult.type == ResultType.done) {
+        Fluttertoast.showToast(msg: '开始安装更新...');
+        return true;
+      } else {
+        throw Exception('打开安装包失败: ${openResult.message}');
       }
     } catch (e) {
       debugPrint('安装Android APK失败: $e');

@@ -125,7 +125,7 @@ jobs:
             fi
             
             # 构建下载 URL (根据你的服务器域名调整)
-            DOWNLOAD_URL="https://your-domain.com/updates/potato_timer_v${VERSION}.apk"
+            DOWNLOAD_URL="https://8.141.116.178/updates/potato_timer_v${VERSION}.apk"
             
             echo "📝 更新版本配置..."
             echo "   版本号: $VERSION"
