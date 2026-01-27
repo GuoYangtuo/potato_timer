@@ -228,21 +228,11 @@ class _CreateMotivationPageState extends State<CreateMotivationPage> {
     final isEditing = widget.editMotivation != null;
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? AppTheme.darkBackgroundColor
+          : AppTheme.backgroundColor,
       appBar: AppBar(
         title: Text(isEditing ? l10n.editMotivation : l10n.createMotivation),
-        actions: [
-          TextButton(
-            onPressed: _isLoading ? null : _save,
-            child: _isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text(l10n.save),
-          ),
-        ],
       ),
       body: Form(
         key: _formKey,
@@ -264,7 +254,7 @@ class _CreateMotivationPageState extends State<CreateMotivationPage> {
                 Expanded(
                   child: _buildTypeCard(
                     type: MotivationType.positive,
-                    icon: Icons.thumb_up_rounded,
+                    icon: Icons.emoji_events_rounded,
                     title: l10n.positive,
                     subtitle: l10n.positiveDesc,
                     color: AppTheme.positiveColor,
@@ -274,7 +264,7 @@ class _CreateMotivationPageState extends State<CreateMotivationPage> {
                 Expanded(
                   child: _buildTypeCard(
                     type: MotivationType.negative,
-                    icon: Icons.thumb_down_rounded,
+                    icon: Icons.warning_amber_rounded,
                     title: l10n.negative,
                     subtitle: l10n.negativeDesc,
                     color: AppTheme.negativeColor,
@@ -343,6 +333,41 @@ class _CreateMotivationPageState extends State<CreateMotivationPage> {
               onChanged: (v) => setState(() => _isPublic = v),
             ),
 
+            const SizedBox(height: 32),
+
+            // 保存按钮
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _save,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                  ),
+                  elevation: 0,
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : Text(
+                        l10n.save,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+              ),
+            ),
+
             const SizedBox(height: 40),
           ],
         ),
@@ -365,7 +390,11 @@ class _CreateMotivationPageState extends State<CreateMotivationPage> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.1) : Colors.white,
+          color: isSelected 
+              ? color.withOpacity(0.1) 
+              : (Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey.shade800
+                  : Colors.white),
           borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
           border: Border.all(
             color: isSelected ? color : Colors.grey.shade200,
@@ -385,7 +414,11 @@ class _CreateMotivationPageState extends State<CreateMotivationPage> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: isSelected ? color : AppTheme.textPrimary,
+                color: isSelected 
+                    ? color 
+                    : (Theme.of(context).brightness == Brightness.dark
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.textPrimary),
               ),
             ),
             const SizedBox(height: 4),
@@ -514,9 +547,16 @@ class _CreateMotivationPageState extends State<CreateMotivationPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: Colors.grey.shade100,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.grey.shade800
+              : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-          border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
+          border: Border.all(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.grey.shade700
+                : Colors.grey.shade300,
+            style: BorderStyle.solid,
+          ),
         ),
         child: Column(
           children: [
@@ -623,7 +663,9 @@ class _CreateMotivationPageState extends State<CreateMotivationPage> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey.shade800
+                        : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
@@ -651,9 +693,15 @@ class _CreateMotivationPageState extends State<CreateMotivationPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Colors.grey.shade800
+            : Colors.white,
         borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.grey.shade700
+              : Colors.grey.shade200,
+        ),
       ),
       child: Row(
         children: [

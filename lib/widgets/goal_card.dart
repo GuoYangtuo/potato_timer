@@ -82,12 +82,16 @@ class GoalCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: isCompleted 
               ? AppTheme.positiveColor.withOpacity(0.1) 
-              : Colors.white,
+              : (Theme.of(context).brightness == Brightness.dark
+                  ? AppTheme.darkCardColor
+                  : Colors.white),
           borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
           border: Border.all(
             color: isCompleted 
                 ? AppTheme.positiveColor.withOpacity(0.3) 
-                : Colors.grey.shade200,
+                : (Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey.shade700
+                    : Colors.grey.shade200),
           ),
           boxShadow: isCompleted ? null : AppTheme.cardShadow,
         ),
@@ -123,7 +127,9 @@ class GoalCard extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                       color: isCompleted 
                           ? AppTheme.positiveColor 
-                          : AppTheme.textPrimary,
+                          : (Theme.of(context).brightness == Brightness.dark
+                              ? AppTheme.darkTextPrimary
+                              : AppTheme.textPrimary),
                       decoration: isCompleted 
                           ? TextDecoration.lineThrough 
                           : null,
@@ -203,7 +209,9 @@ class GoalPreviewCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? AppTheme.darkCardColor
+              : Colors.white,
           borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
           boxShadow: AppTheme.cardShadow,
         ),
@@ -237,10 +245,12 @@ class GoalPreviewCard extends StatelessWidget {
               goal.title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? AppTheme.darkTextPrimary
+                    : AppTheme.textPrimary,
               ),
             ),
 

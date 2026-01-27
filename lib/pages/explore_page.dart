@@ -87,10 +87,12 @@ class _ExplorePageState extends State<ExplorePage>
                 children: [
                   Text(
                     l10n.explore,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimary,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? AppTheme.darkTextPrimary
+                          : AppTheme.textPrimary,
                     ),
                   ),
                 ],
@@ -101,7 +103,9 @@ class _ExplorePageState extends State<ExplorePage>
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 20),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey.shade800
+                    : Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
               ),
               child: TabBar(
@@ -256,7 +260,11 @@ class _ExplorePageState extends State<ExplorePage>
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? chipColor : Colors.grey.shade100,
+          color: isSelected 
+              ? chipColor 
+              : (Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey.shade800
+                  : Colors.grey.shade100),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(

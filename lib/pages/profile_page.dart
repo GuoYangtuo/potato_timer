@@ -278,7 +278,9 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                   Container(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey.shade800
+                          : Colors.grey.shade50,
                       borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                     ),
                     child: Row(
@@ -307,7 +309,9 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 20),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey.shade800
+                    : Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
               ),
               child: TabBar(

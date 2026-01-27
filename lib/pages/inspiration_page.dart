@@ -20,10 +20,12 @@ class InspirationPage extends StatelessWidget {
             children: [
               Text(
                 l10n.inspiration,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? AppTheme.darkTextPrimary
+                      : AppTheme.textPrimary,
                 ),
               ),
               const SizedBox(height: 32),
@@ -70,10 +72,14 @@ class InspirationPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.amber.shade50,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.amber.shade900.withOpacity(0.3)
+                      : Colors.amber.shade50,
                   borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                   border: Border.all(
-                    color: Colors.amber.shade200,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.amber.shade700
+                        : Colors.amber.shade200,
                     width: 1,
                   ),
                 ),
@@ -82,7 +88,9 @@ class InspirationPage extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.amber.shade100,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.amber.shade800.withOpacity(0.5)
+                            : Colors.amber.shade100,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(

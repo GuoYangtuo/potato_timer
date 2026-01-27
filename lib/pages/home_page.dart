@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:potato_timer/l10n/app_localizations.dart';
 import 'package:potato_timer/models/goal.dart';
-import 'package:potato_timer/services/api_service.dart';
 import 'package:potato_timer/services/offline_first_service.dart';
 import 'package:potato_timer/theme/app_theme.dart';
 import 'package:potato_timer/pages/motivation_page.dart';
@@ -166,7 +165,6 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final user = ApiService().currentUser;
 
     return Scaffold(
       body: SafeArea(
@@ -175,39 +173,11 @@ class _HomePageState extends State<HomePage> {
           color: AppTheme.primaryColor,
           child: CustomScrollView(
             slivers: [
-              // 头部问候
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _getGreeting(),
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        user?.nickname ?? l10n.welcome,
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.textPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
               // 主线任务卡片
               if (_mainTask != null)
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                     child: _buildMainTaskCard(_mainTask!, l10n),
                   ),
                 ),
@@ -221,10 +191,12 @@ class _HomePageState extends State<HomePage> {
                     children: [
                       Text(
                         l10n.habit,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.textPrimary,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? AppTheme.darkTextPrimary
+                              : AppTheme.textPrimary,
                         ),
                       ),
                       Text(
@@ -458,16 +430,5 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
-  }
-
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) {
-      return '早上好 ☀️';
-    } else if (hour < 18) {
-      return '下午好 🌤️';
-    } else {
-      return '晚上好 🌙';
-    }
   }
 }

@@ -86,7 +86,9 @@ class MotivationCard extends StatelessWidget {
           : null,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? AppTheme.darkCardColor
+              : Colors.white,
           borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
           boxShadow: AppTheme.cardShadow,
         ),
@@ -187,8 +189,8 @@ class MotivationCard extends StatelessWidget {
                           children: [
                             Icon(
                               motivation.type == MotivationType.positive
-                                  ? Icons.thumb_up_rounded
-                                  : Icons.thumb_down_rounded,
+                                  ? Icons.emoji_events_rounded
+                                  : Icons.warning_amber_rounded,
                               size: 12,
                               color: typeColor,
                             ),
@@ -241,10 +243,12 @@ class MotivationCard extends StatelessWidget {
                       motivation.title!,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: AppTheme.textPrimary,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? AppTheme.darkTextPrimary
+                            : AppTheme.textPrimary,
                       ),
                     ),
                   ],
@@ -277,7 +281,9 @@ class MotivationCard extends StatelessWidget {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.grey.shade800
+                                : Colors.grey.shade100,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
@@ -411,10 +417,18 @@ class MotivationChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.15) : Colors.white,
+          color: isSelected 
+              ? color.withOpacity(0.15) 
+              : (Theme.of(context).brightness == Brightness.dark
+                  ? AppTheme.darkCardColor
+                  : Colors.white),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? color : Colors.grey.shade300,
+            color: isSelected 
+                ? color 
+                : (Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey.shade700
+                    : Colors.grey.shade300),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -423,8 +437,8 @@ class MotivationChip extends StatelessWidget {
           children: [
             Icon(
               motivation.type == MotivationType.positive
-                  ? Icons.thumb_up_rounded
-                  : Icons.thumb_down_rounded,
+                  ? Icons.emoji_events_rounded
+                  : Icons.warning_amber_rounded,
               size: 14,
               color: isSelected ? color : AppTheme.textSecondary,
             ),
@@ -437,7 +451,11 @@ class MotivationChip extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                  color: isSelected ? color : AppTheme.textPrimary,
+                  color: isSelected 
+                      ? color 
+                      : (Theme.of(context).brightness == Brightness.dark
+                          ? AppTheme.darkTextPrimary
+                          : AppTheme.textPrimary),
                 ),
               ),
             ),
