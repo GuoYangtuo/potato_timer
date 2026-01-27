@@ -1,0 +1,39 @@
+name: Build Release
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  # Release 操作
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      discussions: write
+    steps:
+      # 拉取项目代码
+      - uses: actions/checkout@v4
+      # 建立 java 环境
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+      # 建立 Flutter 环境, 使用指定文件的环境
+      - name: Flutter action
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version-file: pubspec.yaml
+      - run: flutter --version
+      # 下载项目依赖
+      - run: flutter pub get
+      # 执行测试
+      - run: flutter test
+      # 打包 APK
+      - name: Build Release apk
+        run: flutter build apk --release
+        working-directory: example

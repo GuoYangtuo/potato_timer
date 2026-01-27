@@ -4,7 +4,7 @@ packages:
   ali_auth:
     dependency: "direct main"
     description:
-      path: "../../flutter_ali_auth"
+      path: flutter_ali_auth
       relative: true
     source: path
     version: "1.3.6"

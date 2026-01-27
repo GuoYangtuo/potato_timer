@@ -14,7 +14,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   # 阿里云一键登录
   ali_auth:
-    path: ../../flutter_ali_auth
+    path: flutter_ali_auth
   # 弹窗提示
   fluttertoast: ^9.0.0
   # HTTP 请求
