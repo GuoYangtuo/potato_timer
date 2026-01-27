@@ -42,7 +42,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'  # 根据你的项目调整版本
+          flutter-version: '3.38.3'  # 根据你的项目调整版本
           channel: 'stable'
 
       # 4. 获取 Flutter 依赖
