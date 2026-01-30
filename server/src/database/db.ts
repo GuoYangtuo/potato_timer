@@ -6,13 +6,13 @@ import path from 'path';
 dotenv.config();
 
 const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '3306'),
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || 'hh20061202',
+  host: process.env.DB_HOST,
+  port: parseInt(process.env.DB_PORT),
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
 };
 
-const dbName = process.env.DB_NAME || 'potato_timer';
+const dbName = process.env.DB_NAME;
 
 // 数据库连接池（延迟初始化）
 let pool: mysql.Pool;

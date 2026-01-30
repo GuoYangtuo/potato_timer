@@ -16,7 +16,7 @@ import versionRouter from './routes/version';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 
 // 中间件
 app.use(cors());

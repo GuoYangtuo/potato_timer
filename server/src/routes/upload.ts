@@ -86,7 +86,7 @@ router.post('/file', authMiddleware, upload.single('file'), async (req: Request,
     const file = req.file;
     const isImage = isImageFile(file);
     const type = isImage ? 'images' : 'videos';
-    const baseUrl = process.env.BASE_URL || `http://192.168.124.18:${process.env.PORT || 3000}`;
+    const baseUrl = process.env.BASE_URL;
     const url = `${baseUrl}/uploads/${type}/${file.filename}`;
 
     res.json({
@@ -119,7 +119,7 @@ router.post('/files', authMiddleware, upload.array('files', 10), async (req: Req
       });
     }
 
-    const baseUrl = process.env.BASE_URL || `http://192.168.124.18:${process.env.PORT || 3000}`;
+    const baseUrl = process.env.BASE_URL;
     
     const uploadedFiles = files.map((file) => {
       const isImage = isImageFile(file);
