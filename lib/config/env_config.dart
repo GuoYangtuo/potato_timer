@@ -40,7 +40,7 @@ class EnvConfig {
       // 生产环境 Secret (需要在阿里云后台使用 release 签名创建)
       return const String.fromEnvironment(
         'ALI_AUTH_ANDROID_SECRET_PROD',
-        defaultValue: 'T1KN2I2QltrfOCkzxadUwN5Ev+cZA9+0o/TTlw67WKqprsa5zUiXqxoqQw7zqcDF6Z4qwkt6miT3nFurS91lcZpb+nEczxh/DK5TMFocsd100/jqK1ItYnI7lrup71nFU5uy3jBCI+pCTpdqR5hDSWgpgkj1UxJuBY6hwmvSD0uWKocMG9Td97B5FGvNfW877RWimRlBjDS5eNilIe/iZKlzYs4GVZBo39Wl/jJtjUKLOP0X8PTxVF6dGI6SnP4LnOxwV1Z65fhAA/RhU2QEnH3HUgB+ugMp4r+JFD/m68tEhg8P7JjHF7ycuWsMwcod',
+        defaultValue: 'fiELEZTB4wk/3W5wjT83Q9z+zQALESQRb1FFZ0kKaig8cr2t4vqt6GsM0s85OOQP022Xn1yAVqcCR0QswOH9Nc6qZEysUK3Dx/4tk4un8Tv5TxAr3Qz4wlO6U7OzDE8EKF9MegUAGrX6SWNRMFiBffMp6bQguHd1KxRkc40aSFIBRrhpdL4JxUHA8IK+ojYiAzFCvwpo7fbReVC0SmZ1Cdbw7ClrXKnDoDJSXUFyyxOjZ7KbjQnBfUQ9CIG4A0lGPFmqpg9pFun0JgYbwbd8Er+OpHHF0pCNMiJ72HZOYJmpV/vvRwsHeNwWHwOaTnGd',
       );
     } else {
       // 开发环境 Secret (使用 debug 签名)
