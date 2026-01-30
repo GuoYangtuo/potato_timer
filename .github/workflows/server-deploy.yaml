@@ -40,9 +40,20 @@ jobs:
             # 创建生产环境配置文件
             echo "📝 创建生产环境配置..."
             cat > .env << EOF
+            # 生产环境配置
             PORT=3000
             BASE_URL=http://8.141.116.178:3000
             JWT_SECRET=${{ secrets.JWT_SECRET }}
+            NODE_ENV=production
+
+            ALIYUN_ACCESS_KEY_ID=${{ secrets.ALIYUN_ACCESS_KEY_ID }}
+            ALIYUN_ACCESS_KEY_SECRET=${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}
+            
+            DB_HOST=localhost
+            DB_PORT=3306
+            DB_USER=root
+            DB_PASSWORD=hh20061202
+            DB_NAME=potato_timer
             EOF
             
             # 安装依赖
