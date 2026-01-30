@@ -49,12 +49,27 @@ jobs:
             
             # 如果没找到版本号，使用默认递增逻辑
             if [ -z "$VERSION" ]; then
-              # 从pubspec.yaml读取当前版本并递增build number
-              CURRENT_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | sed 's/+.*//')
-              CURRENT_BUILD=$(grep '^version:' pubspec.yaml | sed 's/.*+//')
-              NEW_BUILD=$((CURRENT_BUILD + 1))
-              VERSION="${CURRENT_VERSION}+${NEW_BUILD}"
-              echo "未找到版本号，自动递增: $VERSION"
+              echo "📡 从 GitHub Releases 获取最新版本号..."
+              
+              # 从 GitHub API 获取最新 Release
+              LATEST_RELEASE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                "https://api.github.com/repos/${{ github.repository }}/releases/latest")
+              
+              # 提取最新的 tag_name (格式: v2)
+              LATEST_TAG=$(echo "$LATEST_RELEASE" | grep -oP '"tag_name":\s*"v?\K\d+' || echo "0")
+              
+              if [ "$LATEST_TAG" = "0" ]; then
+                echo "⚠️  未找到历史 Release，从 pubspec.yaml 读取初始版本"
+                CURRENT_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | sed 's/+.*//')
+                CURRENT_BUILD=$(grep '^version:' pubspec.yaml | sed 's/.*+//')
+                VERSION="${CURRENT_VERSION}+${CURRENT_BUILD}"
+              else
+                # 从最新 tag 递增
+                NEW_BUILD=$((LATEST_TAG + 1))
+                CURRENT_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | sed 's/+.*//')
+                VERSION="${CURRENT_VERSION}+${NEW_BUILD}"
+                echo "✅ 最新 Release: v${LATEST_TAG}，新版本: ${VERSION}"
+              fi
             fi
             
             # 提取更新日志（commit message的主要内容）

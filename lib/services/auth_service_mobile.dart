@@ -6,6 +6,7 @@ import 'dart:ui';
 
 import 'package:ali_auth/ali_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:potato_timer/config/env_config.dart';
 
 /// 认证服务 - 移动端实现
 class AuthService {
@@ -13,12 +14,11 @@ class AuthService {
   factory AuthService() => _instance;
   AuthService._internal();
 
-  /// Android 密钥
-  final String _androidSk =
-      "dg9TjULHCZ3kh6jOCKNtyeh/ibVufWB8YoaxTSRYz0vRZ4J8AM4Ne2U2SFQxb8W3Ue7fpWaQXznFFBsDPM7ZwlAz6aoxxaiyr7dlidOAjEgzfTHOStqiSWzR4dMyA0BpqnYRRTnmFstSUVwB3X7YMRWpj1S9Aj4VqcMegBczb2KEp5uxUy25RBLWN+2v6yIlPxOR/gfPDGX6oVSOhG+lVrS9S/rUBas9W4wlDhgtKgncUfDYMBSBSIYlVFWrzt8+87lGAnBTu36cCtWOw2JdOufyufGXAtlzosZqgOEcN/X+BAer3xMNYOxexJLDixHL";
+  /// Android 密钥（从环境配置获取）
+  String get _androidSk => EnvConfig.aliAuthAndroidSecret;
 
-  /// iOS 密钥
-  final String _iosSk = "";
+  /// iOS 密钥（从环境配置获取）
+  String get _iosSk => EnvConfig.aliAuthIosSecret;
 
   /// 是否支持一键登录（仅 Android 和 iOS）
   bool get supportsOneClickLogin => Platform.isAndroid || Platform.isIOS;
