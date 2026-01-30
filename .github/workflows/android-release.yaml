@@ -12,86 +12,72 @@ on:
     inputs:
       version_number:
         description: '版本号 (例如: 2)'
-        required: true
+        required: false
         type: string
       update_log:
         description: '更新日志 (使用 \n 分隔多行)'
-        required: true
+        required: false
         type: string
 
 permissions:
   contents: write
 
 jobs:
-  build-and-deploy:
+  # 检测变更的文件类型
+  detect-changes:
     runs-on: ubuntu-latest
+    outputs:
+      server_changed: ${{ steps.changes.outputs.server }}
+      flutter_changed: ${{ steps.changes.outputs.flutter }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # 需要至少2个commit来对比变更
+      
+      - name: Detect changes
+        id: changes
+        run: |
+          # 如果是手动触发，检查所有内容
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "server=true" >> $GITHUB_OUTPUT
+            echo "flutter=true" >> $GITHUB_OUTPUT
+            echo "📋 手动触发：将执行所有任务"
+            exit 0
+          fi
+          
+          # 检测变更的文件
+          echo "📋 检测变更的文件..."
+          git diff --name-only HEAD^ HEAD
+          
+          # 检测server文件变更
+          if git diff --name-only HEAD^ HEAD | grep -E '^server/'; then
+            echo "server=true" >> $GITHUB_OUTPUT
+            echo "✅ 检测到 server 代码变更"
+          else
+            echo "server=false" >> $GITHUB_OUTPUT
+            echo "ℹ️  未检测到 server 代码变更"
+          fi
+          
+          # 检测Flutter相关文件变更
+          if git diff --name-only HEAD^ HEAD | grep -E '^(lib/|android/|pubspec.yaml)'; then
+            echo "flutter=true" >> $GITHUB_OUTPUT
+            echo "✅ 检测到 Flutter 代码变更"
+          else
+            echo "flutter=false" >> $GITHUB_OUTPUT
+            echo "ℹ️  未检测到 Flutter 代码变更"
+          fi
+
+  # 部署Server
+  deploy-server:
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.server_changed == 'true'
     
     steps:
-      # 1. 检出代码
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. 设置 Java 环境 (Android 构建需要)
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      # 3. 设置 Flutter 环境
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.38.3'  # 根据你的项目调整版本
-          channel: 'stable'
-
-      # 4. 获取 Flutter 依赖
-      - name: Install Flutter dependencies
-        run: flutter pub get
-
-      # 5. 从 pubspec.yaml 读取版本号
-      - name: Get version from pubspec.yaml
-        id: version
-        run: |
-          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | sed 's/+.*//')
-          BUILD_NUMBER=$(grep '^version:' pubspec.yaml | sed 's/.*+//')
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "build_number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
-          echo "📦 当前版本: $VERSION+$BUILD_NUMBER"
-
-      # 6. 构建 Android APK (Release)
-      - name: Build Android APK
-        run: |
-          echo "🔨 开始构建 Android APK..."
-          flutter build apk --release
-          echo "✅ APK 构建完成"
-
-      # 7. 重命名 APK 文件
-      - name: Rename APK
-        run: |
-          BUILD_NUM=${{ steps.version.outputs.build_number }}
-          cp build/app/outputs/flutter-apk/app-release.apk potato_timer_v${BUILD_NUM}.apk
-          echo "📦 APK 已重命名为: potato_timer_v${BUILD_NUM}.apk"
-          ls -lh potato_timer_v${BUILD_NUM}.apk
-
-      # 8. 上传 APK 到服务器的 updates 目录
-      - name: Upload APK to server
-        uses: appleboy/scp-action@v1
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_SSH_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          source: "potato_timer_v${{ steps.version.outputs.build_number }}.apk"
-          target: "/root/potato_timer_server/updates/"
-          strip_components: 0
-
-      # 9. 设置 Node.js 环境 (用于运行版本更新脚本)
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      # 10. 上传服务器代码和脚本
       - name: Upload server files
         uses: appleboy/scp-action@v1
         with:
@@ -102,8 +88,157 @@ jobs:
           target: "/root/potato_timer_server/"
           strip_components: 1
 
-      # 11. 在服务器上安装依赖、更新版本配置并重启服务
-      - name: Deploy server and update version
+      - name: Deploy server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_SSH_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /root/potato_timer_server
+            
+            # 创建生产环境配置文件
+            echo "📝 创建生产环境配置..."
+            cat > .env << EOF
+            PORT=3000
+            BASE_URL=http://8.141.116.178:3000
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            EOF
+            
+            # 安装依赖
+            echo "📦 安装依赖..."
+            npm install --production
+            
+            # 重启服务
+            echo "🔄 重启服务..."
+            systemctl restart potato_timer_backend.service
+            
+            echo "✅ Server 部署完成！"
+
+  # 构建和发布APK
+  build-and-release-apk:
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.flutter_changed == 'true'
+    
+    steps:
+      # 1. 检出代码
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. 解析commit信息，提取版本号和更新日志
+      - name: Parse commit message
+        id: parse_commit
+        run: |
+          # 获取最新的commit信息
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          echo "最新commit信息: $COMMIT_MSG"
+          
+          # 判断是否为手动触发
+          if [ -n "${{ github.event.inputs.version_number }}" ]; then
+            VERSION="${{ github.event.inputs.version_number }}"
+            UPDATE_LOG="${{ github.event.inputs.update_log }}"
+            echo "手动指定版本号: $VERSION"
+          else
+            # 尝试从commit信息中提取版本号 (格式: v2.0.0 或 release: 2.0.0)
+            VERSION=$(echo "$COMMIT_MSG" | grep -oP '(?<=v|release:?\s*)\d+\.\d+\.\d+' | head -1)
+            
+            # 如果没找到版本号，使用默认递增逻辑
+            if [ -z "$VERSION" ]; then
+              # 从pubspec.yaml读取当前版本并递增build number
+              CURRENT_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | sed 's/+.*//')
+              CURRENT_BUILD=$(grep '^version:' pubspec.yaml | sed 's/.*+//')
+              NEW_BUILD=$((CURRENT_BUILD + 1))
+              VERSION="${CURRENT_VERSION}+${NEW_BUILD}"
+              echo "未找到版本号，自动递增: $VERSION"
+            fi
+            
+            # 提取更新日志（commit message的主要内容）
+            UPDATE_LOG=$(echo "$COMMIT_MSG" | sed 's/v\?[0-9]\+\.[0-9]\+\.[0-9]\+//' | sed 's/release:*//i' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+            
+            # 如果更新日志为空，使用默认信息
+            if [ -z "$UPDATE_LOG" ]; then
+              UPDATE_LOG="版本更新"
+            fi
+          fi
+          
+          # 提取版本号部分
+          VERSION_PART=$(echo "$VERSION" | sed 's/+.*//')
+          BUILD_PART=$(echo "$VERSION" | grep -oP '(?<=\+)\d+' || echo "1")
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version_part=$VERSION_PART" >> $GITHUB_OUTPUT
+          echo "build_number=$BUILD_PART" >> $GITHUB_OUTPUT
+          echo "update_log=$UPDATE_LOG" >> $GITHUB_OUTPUT
+          
+          echo "📦 版本信息:"
+          echo "  完整版本: $VERSION"
+          echo "  版本号: $VERSION_PART"
+          echo "  Build号: $BUILD_PART"
+          echo "  更新日志: $UPDATE_LOG"
+
+      # 3. 更新pubspec.yaml中的版本号
+      - name: Update pubspec.yaml version
+        run: |
+          VERSION="${{ steps.parse_commit.outputs.version }}"
+          echo "更新 pubspec.yaml 版本为: $VERSION"
+          sed -i "s/^version:.*/version: $VERSION/" pubspec.yaml
+          cat pubspec.yaml | grep '^version:'
+
+      # 4. 设置 Java 环境
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # 5. 设置 Flutter 环境
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.3'
+          channel: 'stable'
+
+      # 6. 获取 Flutter 依赖
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      # 7. 构建 Android APK (Release) - 注入生产环境配置
+      - name: Build Android APK with production config
+        run: |
+          echo "🔨 开始构建 Android APK (生产环境)..."
+          flutter build apk --release \
+            --dart-define=ENVIRONMENT=production \
+            --dart-define=BASE_URL=http://8.141.116.178:3000
+          echo "✅ APK 构建完成"
+
+      # 8. 重命名 APK 文件
+      - name: Rename APK
+        run: |
+          BUILD_NUM=${{ steps.parse_commit.outputs.build_number }}
+          cp build/app/outputs/flutter-apk/app-release.apk potato_timer_v${BUILD_NUM}.apk
+          echo "📦 APK 已重命名为: potato_timer_v${BUILD_NUM}.apk"
+          ls -lh potato_timer_v${BUILD_NUM}.apk
+
+      # 9. 上传 APK 到服务器的 updates 目录
+      - name: Upload APK to server
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_SSH_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "potato_timer_v${{ steps.parse_commit.outputs.build_number }}.apk"
+          target: "/root/potato_timer_server/updates/"
+          strip_components: 0
+
+      # 10. 设置 Node.js 环境
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 11. 在服务器上更新版本配置
+      - name: Update version config on server
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SERVER_IP }}
@@ -112,17 +247,9 @@ jobs:
           script: |
             cd /root/potato_timer_server 
             
-            # 确定版本号和更新日志
-            if [ -n "${{ github.event.inputs.version_number }}" ]; then
-              VERSION="${{ github.event.inputs.version_number }}"
-              UPDATE_LOG="${{ github.event.inputs.update_log }}"
-            else
-              VERSION="${{ steps.version.outputs.build_number }}"
-              UPDATE_LOG="自动发布版本 $VERSION"
-            fi
-            
-            # 构建下载 URL (根据你的服务器域名调整)
-            DOWNLOAD_URL="https://8.141.116.178/updates/potato_timer_v${VERSION}.apk"
+            VERSION="${{ steps.parse_commit.outputs.build_number }}"
+            UPDATE_LOG="${{ steps.parse_commit.outputs.update_log }}"
+            DOWNLOAD_URL="http://8.141.116.178:3000/updates/potato_timer_v${VERSION}.apk"
             
             echo "📝 更新版本配置..."
             echo "   版本号: $VERSION"
@@ -132,27 +259,23 @@ jobs:
             # 运行版本更新脚本
             node scripts/update-version.js "$VERSION" "$DOWNLOAD_URL" "$UPDATE_LOG"
             
-            # 重启服务 (根据你的服务名称调整)
-            echo "🔄 重启服务..."
-            systemctl restart potato_timer_backend.service
-            
-            echo "✅ 部署完成！"
+            echo "✅ 版本配置更新完成！"
 
-      # 12. 创建 GitHub Release (可选)
+      # 12. 创建 GitHub Release
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ steps.version.outputs.build_number }}
-          name: Release v${{ steps.version.outputs.build_number }}
+          tag_name: v${{ steps.parse_commit.outputs.build_number }}
+          name: Release v${{ steps.parse_commit.outputs.build_number }}
           body: |
-            ## 版本 ${{ steps.version.outputs.build_number }}
+            ## 版本 ${{ steps.parse_commit.outputs.build_number }}
             
-            ${{ github.event.inputs.update_log || '自动构建发布' }}
+            ${{ steps.parse_commit.outputs.update_log }}
             
             ### 下载
-            - [Android APK](https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.build_number }}/potato_timer_v${{ steps.version.outputs.build_number }}.apk)
+            - [Android APK](https://github.com/${{ github.repository }}/releases/download/v${{ steps.parse_commit.outputs.build_number }}/potato_timer_v${{ steps.parse_commit.outputs.build_number }}.apk)
           files: |
-            potato_timer_v${{ steps.version.outputs.build_number }}.apk
+            potato_timer_v${{ steps.parse_commit.outputs.build_number }}.apk
           draft: false
           prerelease: false
         env:
@@ -163,9 +286,9 @@ jobs:
         run: |
           echo "## 🎉 构建和部署成功！" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **版本号**: ${{ steps.version.outputs.build_number }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **APK 文件**: potato_timer_v${{ steps.version.outputs.build_number }}.apk" >> $GITHUB_STEP_SUMMARY
+          echo "- **版本号**: ${{ steps.parse_commit.outputs.build_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **更新日志**: ${{ steps.parse_commit.outputs.update_log }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **APK 文件**: potato_timer_v${{ steps.parse_commit.outputs.build_number }}.apk" >> $GITHUB_STEP_SUMMARY
           echo "- **构建时间**: $(date)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "客户端将在下次启动时自动检测并更新到新版本。" >> $GITHUB_STEP_SUMMARY
-
