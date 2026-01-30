@@ -33,7 +33,7 @@ import com.sean.rao.ali_auth.login.OneKeyLoginPublic;
 import com.sean.rao.ali_auth.utils.UtilTool;
 
 /** AliAuthPlugin */
-public class AliAuthPlugin extends FlutterActivity implements FlutterPlugin, ActivityAware, MethodCallHandler, EventChannel.StreamHandler {
+public class AliAuthPlugin implements FlutterPlugin, ActivityAware, MethodCallHandler, EventChannel.StreamHandler {
   private static final String TAG = "ali_auth 一键登录插件";
 
   private Context mContext;
