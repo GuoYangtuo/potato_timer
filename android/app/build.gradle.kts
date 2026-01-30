@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -7,10 +10,10 @@ plugins {
 
 // 读取签名配置
 val keystorePropertiesFile = rootProject.file("key.properties")
-val keystoreProperties = java.util.Properties()
+val keystoreProperties = Properties()
 
 if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(java.io.FileInputStream(keystorePropertiesFile))
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
 android {
@@ -24,8 +27,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
     }
 
     // 签名配置
@@ -33,7 +38,7 @@ android {
         create("release") {
             keyAlias = keystoreProperties.getProperty("keyAlias") ?: ""
             keyPassword = keystoreProperties.getProperty("keyPassword") ?: ""
-            storeFile = keystoreProperties.getProperty("storeFile")?.let { file("../$it") }
+            storeFile = keystoreProperties.getProperty("storeFile")?.let { fileName -> file("../$fileName") }
             storePassword = keystoreProperties.getProperty("storePassword") ?: ""
         }
     }
