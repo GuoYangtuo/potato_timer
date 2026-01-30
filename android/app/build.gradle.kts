@@ -5,6 +5,14 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// 读取签名配置
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties = java.util.Properties()
+
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(java.io.FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace = "com.guoyangtuo.potatoclock1"
     compileSdk = flutter.compileSdkVersion
@@ -20,6 +28,16 @@ android {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
+    // 签名配置
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties.getProperty("keyAlias") ?: ""
+            keyPassword = keystoreProperties.getProperty("keyPassword") ?: ""
+            storeFile = keystoreProperties.getProperty("storeFile")?.let { file("../$it") }
+            storePassword = keystoreProperties.getProperty("storePassword") ?: ""
+        }
+    }
+
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.guoyangtuo.potatoclock1"
@@ -33,9 +51,14 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // 使用 release 签名配置
+            signingConfig = if (keystorePropertiesFile.exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                // 如果 key.properties 不存在，回退到 debug 签名（本地开发）
+                println("⚠️  警告：未找到 key.properties，使用 debug 签名")
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }

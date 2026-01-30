@@ -122,6 +122,24 @@ jobs:
       - name: Install Flutter dependencies
         run: flutter pub get
 
+      # 6.5. 配置签名文件
+      - name: Setup release signing
+        run: |
+          echo "🔐 配置 Release 签名..."
+          
+          # 从 GitHub Secrets 解码 keystore 文件（Base64 编码）
+          echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
+          
+          # 创建 key.properties 文件
+          cat > android/key.properties << EOF
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          storeFile=app/release.keystore
+          EOF
+          
+          echo "✅ 签名配置完成"
+
       # 7. 构建 Android APK (Release) - 注入生产环境配置
       - name: Build Android APK with production config
         run: |

@@ -1,0 +1,5 @@
+storePassword=hh20061202
+keyPassword=hh20061202
+keyAlias=potato_timer
+storeFile=release.keystore
+
