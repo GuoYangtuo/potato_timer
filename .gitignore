@@ -58,3 +58,5 @@ potato_timer_deploy_key.pub
 # Server updates directory (APK files)
 /server/updates/*.apk
 /server/updates/*.aab
+
+/server/version-config.json

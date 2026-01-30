@@ -107,7 +107,7 @@ jobs:
             
             # 安装依赖
             echo "📦 安装依赖..."
-            npm install --production
+            npm install
             
             # 重启服务
             echo "🔄 重启服务..."
