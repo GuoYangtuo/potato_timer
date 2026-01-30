@@ -1,4 +1,4 @@
-name: Android Release & Deploy
+name: Android Release
 
 on:
   push:
@@ -7,7 +7,6 @@ on:
       - 'lib/**'
       - 'android/**'
       - 'pubspec.yaml'
-      - 'server/**'
   workflow_dispatch:
     inputs:
       version_number:
@@ -23,103 +22,8 @@ permissions:
   contents: write
 
 jobs:
-  # 检测变更的文件类型
-  detect-changes:
-    runs-on: ubuntu-latest
-    outputs:
-      server_changed: ${{ steps.changes.outputs.server }}
-      flutter_changed: ${{ steps.changes.outputs.flutter }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2  # 需要至少2个commit来对比变更
-      
-      - name: Detect changes
-        id: changes
-        run: |
-          # 如果是手动触发，检查所有内容
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "server=true" >> $GITHUB_OUTPUT
-            echo "flutter=true" >> $GITHUB_OUTPUT
-            echo "📋 手动触发：将执行所有任务"
-            exit 0
-          fi
-          
-          # 检测变更的文件
-          echo "📋 检测变更的文件..."
-          git diff --name-only HEAD^ HEAD
-          
-          # 检测server文件变更
-          if git diff --name-only HEAD^ HEAD | grep -E '^server/'; then
-            echo "server=true" >> $GITHUB_OUTPUT
-            echo "✅ 检测到 server 代码变更"
-          else
-            echo "server=false" >> $GITHUB_OUTPUT
-            echo "ℹ️  未检测到 server 代码变更"
-          fi
-          
-          # 检测Flutter相关文件变更
-          if git diff --name-only HEAD^ HEAD | grep -E '^(lib/|android/|pubspec.yaml)'; then
-            echo "flutter=true" >> $GITHUB_OUTPUT
-            echo "✅ 检测到 Flutter 代码变更"
-          else
-            echo "flutter=false" >> $GITHUB_OUTPUT
-            echo "ℹ️  未检测到 Flutter 代码变更"
-          fi
-
-  # 部署Server
-  deploy-server:
-    runs-on: ubuntu-latest
-    needs: detect-changes
-    if: needs.detect-changes.outputs.server_changed == 'true'
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Upload server files
-        uses: appleboy/scp-action@v1
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_SSH_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          source: "server/*"
-          target: "/root/potato_timer_server/"
-          strip_components: 1
-
-      - name: Deploy server
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_SSH_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script: |
-            cd /root/potato_timer_server
-            
-            # 创建生产环境配置文件
-            echo "📝 创建生产环境配置..."
-            cat > .env << EOF
-            PORT=3000
-            BASE_URL=http://8.141.116.178:3000
-            JWT_SECRET=${{ secrets.JWT_SECRET }}
-            EOF
-            
-            # 安装依赖
-            echo "📦 安装依赖..."
-            npm install
-            
-            # 重启服务
-            echo "🔄 重启服务..."
-            systemctl restart potato_timer_backend.service
-            
-            echo "✅ Server 部署完成！"
-
-  # 构建和发布APK
   build-and-release-apk:
     runs-on: ubuntu-latest
-    needs: detect-changes
-    if: needs.detect-changes.outputs.flutter_changed == 'true'
     
     steps:
       # 1. 检出代码

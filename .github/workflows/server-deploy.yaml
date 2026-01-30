@@ -1,0 +1,64 @@
+name: Deploy Server
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-server:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Upload server files
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_SSH_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "server/*"
+          target: "/root/potato_timer_server/"
+          strip_components: 1
+
+      - name: Deploy server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_SSH_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /root/potato_timer_server
+            
+            # 创建生产环境配置文件
+            echo "📝 创建生产环境配置..."
+            cat > .env << EOF
+            PORT=3000
+            BASE_URL=http://8.141.116.178:3000
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            EOF
+            
+            # 安装依赖
+            echo "📦 安装依赖..."
+            npm install --production
+            
+            # 重启服务
+            echo "🔄 重启服务..."
+            systemctl restart potato_timer_backend.service
+            
+            echo "✅ Server 部署完成！"
+
+      - name: Deployment Summary
+        run: |
+          echo "## 🎉 服务器部署成功！" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **部署时间**: $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "- **服务器**: http://8.141.116.178:3000" >> $GITHUB_STEP_SUMMARY
+
