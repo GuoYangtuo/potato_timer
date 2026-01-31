@@ -135,31 +135,7 @@ jobs:
       - name: Install Flutter dependencies
         run: flutter pub get
 
-      # 8. 缓存 Gradle 构建输出
-      - name: Cache Gradle build
-        uses: actions/cache@v4
-        with:
-          path: |
-            android/.gradle
-            android/app/build
-            build/app
-          key: ${{ runner.os }}-gradle-build-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', 'pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-build-
-
-      # 9. 缓存 Kotlin 编译输出
-      - name: Cache Kotlin daemon
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-            ~/.kotlin
-          key: ${{ runner.os }}-kotlin-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-kotlin-
-
-      # 10. 配置签名文件
+      # 8. 配置签名文件
       - name: Setup release signing
         run: |
           echo "🔐 配置 Release 签名..."
@@ -177,7 +153,7 @@ jobs:
           
           echo "✅ 签名配置完成"
 
-      # 11. 构建 Android APK (Release) - 注入生产环境配置
+      # 9. 构建 Android APK (Release) - 注入生产环境配置
       - name: Build Android APK with production config
         run: |
           echo "🔨 开始构建 Android APK (生产环境)..."
@@ -186,7 +162,7 @@ jobs:
             --dart-define=BASE_URL=http://8.141.116.178:3000
           echo "✅ APK 构建完成"
 
-      # 12. 重命名 APK 文件
+      # 10. 重命名 APK 文件
       - name: Rename APK
         run: |
           BUILD_NUM=${{ steps.parse_commit.outputs.build_number }}
@@ -194,7 +170,7 @@ jobs:
           echo "📦 APK 已重命名为: potato_timer_v${BUILD_NUM}.apk"
           ls -lh potato_timer_v${BUILD_NUM}.apk
 
-      # 13. 上传 APK 到服务器的 updates 目录
+      # 11. 上传 APK 到服务器的 updates 目录
       - name: Upload APK to server
         uses: appleboy/scp-action@v1
         with:
@@ -205,7 +181,7 @@ jobs:
           target: "/root/potato_timer_server/updates/"
           strip_components: 0
 
-      # 14. 在服务器上更新版本配置
+      # 12. 在服务器上更新版本配置
       - name: Update version config on server
         uses: appleboy/ssh-action@v1
         with:
@@ -229,7 +205,7 @@ jobs:
             
             echo "✅ 版本配置更新完成！"
 
-      # 15. 创建 GitHub Release
+      # 13. 创建 GitHub Release
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
@@ -249,7 +225,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 16. 通知构建结果
+      # 14. 通知构建结果
       - name: Build Summary
         run: |
           echo "## 🎉 构建和部署成功！" >> $GITHUB_STEP_SUMMARY
