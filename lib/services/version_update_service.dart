@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:open_file/open_file.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 /// 版本更新服务
 /// 负责检查版本、下载更新包、安装更新
@@ -13,6 +14,11 @@ class VersionUpdateService {
   static final VersionUpdateService _instance = VersionUpdateService._internal();
   factory VersionUpdateService() => _instance;
   VersionUpdateService._internal();
+
+  /// SharedPreferences keys
+  static const String _keyDownloadedApkPath = 'downloaded_apk_path';
+  static const String _keyDownloadedApkVersion = 'downloaded_apk_version';
+  static const String _keyDownloadedApkSize = 'downloaded_apk_size';
 
   /// 下载进度回调
   ValueNotifier<double> downloadProgress = ValueNotifier<double>(0.0);
@@ -45,6 +51,7 @@ class VersionUpdateService {
       final response = await http.get(
         Uri.parse('$baseUrl/api/version/check'),
       ).timeout(const Duration(seconds: 10));
+      debugPrint(response.body);
       
       if (response.statusCode == 200) {
         final data = response.body;
@@ -98,43 +105,152 @@ class VersionUpdateService {
     }
   }
   
-  /// 下载更新包
+  /// 检查是否已有下载完成的APK（断点续传支持）
+  /// 返回：下载完成的文件路径，没有则返回 null
+  Future<String?> checkExistingDownload(int targetVersion) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedPath = prefs.getString(_keyDownloadedApkPath);
+      final savedVersion = prefs.getInt(_keyDownloadedApkVersion);
+      final savedSize = prefs.getInt(_keyDownloadedApkSize);
+      
+      if (savedPath == null || savedVersion == null || savedSize == null) {
+        return null;
+      }
+      
+      // 检查版本是否匹配
+      if (savedVersion != targetVersion) {
+        debugPrint('已下载版本($savedVersion)与目标版本($targetVersion)不匹配，需重新下载');
+        await _clearDownloadInfo();
+        return null;
+      }
+      
+      // 检查文件是否存在
+      final file = File(savedPath);
+      if (!await file.exists()) {
+        debugPrint('已下载文件不存在，需重新下载');
+        await _clearDownloadInfo();
+        return null;
+      }
+      
+      // 检查文件大小是否完整
+      final fileSize = await file.length();
+      if (fileSize != savedSize) {
+        debugPrint('文件大小不匹配 (本地: $fileSize, 期望: $savedSize)，需重新下载');
+        await file.delete();
+        await _clearDownloadInfo();
+        return null;
+      }
+      
+      debugPrint('找到已下载的APK: $savedPath');
+      _downloadedFilePath = savedPath;
+      downloadProgress.value = 1.0;
+      return savedPath;
+    } catch (e) {
+      debugPrint('检查已下载文件失败: $e');
+      return null;
+    }
+  }
+  
+  /// 保存下载信息到持久化存储
+  Future<void> _saveDownloadInfo(String filePath, int version, int fileSize) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyDownloadedApkPath, filePath);
+    await prefs.setInt(_keyDownloadedApkVersion, version);
+    await prefs.setInt(_keyDownloadedApkSize, fileSize);
+  }
+  
+  /// 清除下载信息
+  Future<void> _clearDownloadInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyDownloadedApkPath);
+    await prefs.remove(_keyDownloadedApkVersion);
+    await prefs.remove(_keyDownloadedApkSize);
+  }
+  
+  /// 下载更新包（支持断点续传）
   /// 返回：下载的文件路径，失败返回 null
-  Future<String?> downloadUpdate(String downloadUrl) async {
+  Future<String?> downloadUpdate(String downloadUrl, {int? targetVersion}) async {
     try {
       isDownloading.value = true;
       downloadProgress.value = 0.0;
       
-      // 获取应用缓存目录
-      final tempDir = await getTemporaryDirectory();
+      // 使用应用文档目录（持久化存储），而非临时目录
+      final appDir = await getApplicationDocumentsDirectory();
       final fileName = _getFileNameFromUrl(downloadUrl);
-      final filePath = '${tempDir.path}/$fileName';
+      final filePath = '${appDir.path}/updates/$fileName';
       
-      // 删除旧的下载文件
-      final file = File(filePath);
-      if (await file.exists()) {
-        await file.delete();
+      // 确保目录存在
+      final updateDir = Directory('${appDir.path}/updates');
+      if (!await updateDir.exists()) {
+        await updateDir.create(recursive: true);
       }
       
-      // 开始下载
+      final file = File(filePath);
+      int downloadedBytes = 0;
+      
+      // 检查是否有部分下载的文件（断点续传）
+      if (await file.exists()) {
+        downloadedBytes = await file.length();
+        debugPrint('发现部分下载的文件，已下载: $downloadedBytes 字节');
+      }
+      
+      // 先获取文件总大小
+      final headResponse = await http.head(Uri.parse(downloadUrl));
+      final contentLength = int.tryParse(
+        headResponse.headers['content-length'] ?? '0'
+      ) ?? 0;
+      
+      debugPrint('文件总大小: $contentLength 字节');
+      
+      // 如果已下载完成
+      if (downloadedBytes > 0 && downloadedBytes >= contentLength && contentLength > 0) {
+        debugPrint('文件已完整下载');
+        _downloadedFilePath = filePath;
+        isDownloading.value = false;
+        downloadProgress.value = 1.0;
+        
+        if (targetVersion != null) {
+          await _saveDownloadInfo(filePath, targetVersion, contentLength);
+        }
+        return filePath;
+      }
+      
+      // 创建下载请求（支持断点续传）
       final request = http.Request('GET', Uri.parse(downloadUrl));
+      if (downloadedBytes > 0) {
+        request.headers['Range'] = 'bytes=$downloadedBytes-';
+        debugPrint('断点续传，从 $downloadedBytes 字节开始');
+      }
+      
       final response = await http.Client().send(request);
       
-      if (response.statusCode != 200) {
+      // 检查响应状态码
+      // 200 = 完整下载, 206 = 部分内容（断点续传）
+      if (response.statusCode != 200 && response.statusCode != 206) {
         throw Exception('下载失败: ${response.statusCode}');
       }
       
-      final contentLength = response.contentLength ?? 0;
-      int downloadedBytes = 0;
+      // 如果服务器不支持断点续传，重新下载
+      if (downloadedBytes > 0 && response.statusCode == 200) {
+        debugPrint('服务器不支持断点续传，重新下载');
+        downloadedBytes = 0;
+        if (await file.exists()) {
+          await file.delete();
+        }
+      }
       
-      final sink = file.openWrite();
+      final totalBytes = contentLength > 0 ? contentLength : (response.contentLength ?? 0);
+      
+      // 打开文件写入（追加模式用于断点续传）
+      final sink = file.openWrite(mode: downloadedBytes > 0 ? FileMode.append : FileMode.write);
       
       await for (final chunk in response.stream) {
         sink.add(chunk);
         downloadedBytes += chunk.length;
         
-        if (contentLength > 0) {
-          downloadProgress.value = downloadedBytes / contentLength;
+        if (totalBytes > 0) {
+          downloadProgress.value = downloadedBytes / totalBytes;
         }
       }
       
@@ -144,11 +260,18 @@ class VersionUpdateService {
       isDownloading.value = false;
       downloadProgress.value = 1.0;
       
+      // 保存下载信息
+      if (targetVersion != null) {
+        final finalSize = await file.length();
+        await _saveDownloadInfo(filePath, targetVersion, finalSize);
+      }
+      
+      debugPrint('下载完成: $filePath');
       return filePath;
     } catch (e) {
       debugPrint('下载更新包失败: $e');
       isDownloading.value = false;
-      downloadProgress.value = 0.0;
+      // 不重置进度，保留部分下载的状态
       Fluttertoast.showToast(msg: '下载失败: $e');
       return null;
     }
@@ -170,6 +293,36 @@ class VersionUpdateService {
     }
     
     return 'update_package';
+  }
+  
+  /// 检查是否有安装APK的权限
+  Future<bool> hasInstallPermission() async {
+    if (!Platform.isAndroid) {
+      return true;
+    }
+    
+    final status = await Permission.requestInstallPackages.status;
+    return status.isGranted;
+  }
+  
+  /// 请求安装APK的权限
+  /// 返回：true - 已授权，false - 用户拒绝
+  Future<bool> requestInstallPermission() async {
+    if (!Platform.isAndroid) {
+      return true;
+    }
+    
+    // 检查当前权限状态
+    var status = await Permission.requestInstallPackages.status;
+    
+    if (status.isGranted) {
+      return true;
+    }
+    
+    // 请求权限（会跳转到系统设置页面）
+    status = await Permission.requestInstallPackages.request();
+    
+    return status.isGranted;
   }
   
   /// 安装更新包
@@ -197,6 +350,21 @@ class VersionUpdateService {
       final file = File(filePath);
       if (!await file.exists()) {
         throw Exception('安装包文件不存在');
+      }
+      
+      // 检查安装权限
+      final hasPermission = await hasInstallPermission();
+      if (!hasPermission) {
+        Fluttertoast.showToast(
+          msg: '请先授予安装权限',
+          toastLength: Toast.LENGTH_LONG,
+        );
+        
+        // 尝试请求权限
+        final granted = await requestInstallPermission();
+        if (!granted) {
+          throw Exception('未授予安装权限，请在设置中允许安装未知来源应用');
+        }
       }
       
       debugPrint('准备安装APK: $filePath');
@@ -248,8 +416,8 @@ class VersionUpdateService {
       _downloadedFilePath = null;
     }
     
+    await _clearDownloadInfo();
     downloadProgress.value = 0.0;
     isDownloading.value = false;
   }
 }
-

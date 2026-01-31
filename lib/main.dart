@@ -31,11 +31,17 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  // 全局 NavigatorKey，用于在 MaterialApp 外部访问 Navigator
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   void initState() {
     super.initState();
     // 应用启动后检查版本更新
-    _checkForUpdate();
+    // 使用 addPostFrameCallback 确保在第一帧渲染完成后执行
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkForUpdate();
+    });
   }
 
   /// 检查版本更新
@@ -43,7 +49,9 @@ class _MyAppState extends State<MyApp> {
     // 延迟1秒，等待UI完全加载
     await Future.delayed(const Duration(seconds: 1));
     
-    if (!mounted) return;
+    // 获取 Navigator 的 context
+    final navigatorContext = _navigatorKey.currentContext;
+    if (navigatorContext == null || !mounted) return;
     
     try {
       final updateService = VersionUpdateService();
@@ -55,7 +63,7 @@ class _MyAppState extends State<MyApp> {
       if (versionInfo != null && mounted) {
         // 显示更新弹窗（不可关闭）
         showDialog(
-          context: context,
+          context: navigatorContext,
           barrierDismissible: false, // 不允许点击外部关闭
           builder: (context) => UpdateDialog(versionInfo: versionInfo),
         );
@@ -69,6 +77,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: _navigatorKey, // 设置 navigatorKey
       title: 'Potato Timer',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,

@@ -36,6 +36,8 @@ dependencies:
   # 版本更新相关
   package_info_plus: ^8.0.0
   open_file: ^3.3.2
+  # 权限处理
+  permission_handler: ^11.3.1
   # 国际化
   flutter_localizations:
     sdk: flutter
