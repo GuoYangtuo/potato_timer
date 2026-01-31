@@ -2,25 +2,44 @@
 
 # ==================== 阿里云一键登录 SDK 混淆规则 ====================
 
-# 保护阿里云一键登录 SDK 核心类
+# 【关键配置】禁止优化（防止 R8 移除 super.onCreate() 调用）
+-dontoptimize
+
+# 保持调试信息（帮助定位问题）
+-keepattributes SourceFile,LineNumberTable
+
+# 【核心保护】完全保护阿里云 SDK 的三个 Activity（不混淆、不优化、不收缩）
+-keep class com.mobile.auth.gatewayauth.LoginAuthActivity {
+    *;
+}
+
+-keep class com.cmic.sso.sdk.activity.LoginAuthActivity {
+    *;
+}
+
+-keep class com.mobile.auth.gatewayauth.activity.AuthWebVeiwActivity {
+    *;
+}
+
+# 保护阿里云一键登录 SDK 所有类
 -keep class com.mobile.auth.** { *; }
 -keep class com.cmic.sso.** { *; }
 -keep class com.unicom.** { *; }
 -keep class com.ct.** { *; }
 
-# 保护阿里云 SDK 的授权页 Activity（关键！）
--keep public class com.mobile.auth.gatewayauth.LoginAuthActivity { *; }
--keep public class com.cmic.sso.sdk.activity.LoginAuthActivity { *; }
--keep public class com.mobile.auth.gatewayauth.activity.AuthWebVeiwActivity { *; }
-
-# 保护所有 Activity 的生命周期方法（防止被优化移除 super.onCreate() 等调用）
+# 保护所有 Activity 的生命周期方法
 -keepclassmembers class * extends android.app.Activity {
-    public void onCreate(android.os.Bundle);
-    public void onStart();
-    public void onResume();
-    public void onPause();
-    public void onStop();
-    public void onDestroy();
+    protected void onCreate(android.os.Bundle);
+    protected void onStart();
+    protected void onResume();
+    protected void onPause();
+    protected void onStop();
+    protected void onDestroy();
+}
+
+# 保护 Activity 构造函数
+-keepclasseswithmembers class * extends android.app.Activity {
+    <init>(...);
 }
 
 # 保护阿里云 SDK 内部使用的反射类

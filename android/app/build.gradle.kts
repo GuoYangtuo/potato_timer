@@ -60,9 +60,9 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             
-            // 引用 ProGuard 混淆规则
+            // 引用 ProGuard 混淆规则（重要：proguard-android.txt 比 proguard-android-optimize.txt 更保守）
             proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
+                getDefaultProguardFile("proguard-android.txt"),  // 使用标准规则而非优化规则
                 "proguard-rules.pro"
             )
             
