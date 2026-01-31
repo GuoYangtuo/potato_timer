@@ -56,6 +56,8 @@ android {
 
     buildTypes {
         release {
+            isMinifyEnabled = false  // 禁用代码混淆
+            isShrinkResources = false // 禁用资源压缩
             // 使用 release 签名配置
             signingConfig = if (keystorePropertiesFile.exists()) {
                 signingConfigs.getByName("release")
