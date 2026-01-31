@@ -56,6 +56,16 @@ android {
 
     buildTypes {
         release {
+            // 启用代码混淆和资源压缩（优化 APK 体积和代码安全性）
+            isMinifyEnabled = true
+            isShrinkResources = true
+            
+            // 引用 ProGuard 混淆规则
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            
             // 使用 release 签名配置
             signingConfig = if (keystorePropertiesFile.exists()) {
                 signingConfigs.getByName("release")
